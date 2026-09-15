@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import QRCode from 'qrcode';
+import Navbar from '../../components/Navbar';
 import { api } from '../../lib/api';
 import { uploadViaApi } from '../../lib/ensureBucket';
 import { generateExpCertificatePdf } from './letters/generateExpCertPdf';
@@ -10,6 +11,124 @@ import {
 import { generateSalarySlipPdf, amountInWords } from './payroll/generateSalarySlipPdf';
 import { generateJoiningFormPdf } from './generateJoiningFormPdf';
 import './HrPortal.css';
+
+const svgProps = {
+  width: 15,
+  height: 15,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  strokeWidth: 2,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+};
+
+const Ico = {
+  dashboard: (
+    <svg {...svgProps} stroke="#d97706">
+      <rect x="3" y="3" width="7" height="9" rx="1" />
+      <rect x="14" y="3" width="7" height="5" rx="1" />
+      <rect x="14" y="12" width="7" height="9" rx="1" />
+      <rect x="3" y="16" width="7" height="5" rx="1" />
+    </svg>
+  ),
+  users: (
+    <svg {...svgProps} stroke="#2563eb">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  clock: (
+    <svg {...svgProps} stroke="#2563eb">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </svg>
+  ),
+  leave: (
+    <svg {...svgProps} stroke="#7c3aed">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="13" y2="17" />
+    </svg>
+  ),
+  recruit: (
+    <svg {...svgProps} stroke="#db2777">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <line x1="19" y1="8" x2="19" y2="14" />
+      <line x1="22" y1="11" x2="16" y2="11" />
+    </svg>
+  ),
+  shield: (
+    <svg {...svgProps} stroke="#16a34a">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  payroll: (
+    <svg {...svgProps} stroke="#d97706">
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+    </svg>
+  ),
+  letter: (
+    <svg {...svgProps} stroke="#7c3aed">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="13" y2="17" />
+    </svg>
+  ),
+  docs: (
+    <svg {...svgProps} stroke="#db2777">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    </svg>
+  ),
+  office: (
+    <svg {...svgProps} stroke="#2563eb">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ),
+  logout: (
+    <svg {...svgProps} stroke="#dc2626">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  ),
+  sun: (
+    <svg {...svgProps} stroke="currentColor">
+      <circle cx="12" cy="12" r="5" />
+      <line x1="12" y1="1" x2="12" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" />
+      <line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  ),
+  moon: (
+    <svg {...svgProps} stroke="currentColor">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  ),
+};
+
+const NAV = [
+  { key: 'dashboard', label: 'Dashboard', icon: Ico.dashboard },
+  { key: 'employees', label: 'Employees', icon: Ico.users },
+  { key: 'attendance', label: 'Attendance', icon: Ico.clock },
+  { key: 'leaves', label: 'Leaves', icon: Ico.leave },
+  { key: 'recruitment', label: 'Recruitment', icon: Ico.recruit },
+  { key: 'insurance', label: 'Insurance', icon: Ico.shield },
+  { key: 'payroll', label: 'Payroll', icon: Ico.payroll },
+  { key: 'letters', label: 'Letters', icon: Ico.letter },
+  { key: 'documents', label: 'Documents', icon: Ico.docs },
+];
 
 function safePathSeg(s) {
   return (
@@ -40,18 +159,6 @@ async function makeQrDataUrl(text) {
     return '';
   }
 }
-
-const NAV = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'employees', label: 'Employees' },
-  { key: 'attendance', label: 'Attendance' },
-  { key: 'leaves', label: 'Leaves' },
-  { key: 'recruitment', label: 'Recruitment' },
-  { key: 'insurance', label: 'Insurance' },
-  { key: 'payroll', label: 'Payroll' },
-  { key: 'letters', label: 'Letters' },
-  { key: 'documents', label: 'Documents' },
-];
 
 const RECRUIT_STATUSES = [
   'Request Received',
@@ -117,15 +224,42 @@ function Dashboard({ employees, leaves, attendanceToday, candidates, alerts, onS
   return (
     <>
       <div className="hr-cards">
-        <div className="hr-stat"><div className="n">{active}</div><div className="l">Active employees</div></div>
-        <div className="hr-stat"><div className="n">{present}</div><div className="l">Present today</div></div>
-        <div className="hr-stat"><div className="n">{pendingLeaves}</div><div className="l">Pending leaves</div></div>
-        <div className="hr-stat"><div className="n">{openHiring}</div><div className="l">Open hiring</div></div>
+        <div className="hr-stat hr-stat--blue">
+          <div className="hr-stat-ico" aria-hidden>{Ico.users}</div>
+          <div>
+            <div className="n">{active}</div>
+            <div className="l">Active employees</div>
+          </div>
+        </div>
+        <div className="hr-stat hr-stat--green">
+          <div className="hr-stat-ico" aria-hidden>{Ico.clock}</div>
+          <div>
+            <div className="n">{present}</div>
+            <div className="l">Present today</div>
+          </div>
+        </div>
+        <div className="hr-stat hr-stat--amber">
+          <div className="hr-stat-ico" aria-hidden>{Ico.leave}</div>
+          <div>
+            <div className="n">{pendingLeaves}</div>
+            <div className="l">Pending leaves</div>
+          </div>
+        </div>
+        <div className="hr-stat hr-stat--pink">
+          <div className="hr-stat-ico" aria-hidden>{Ico.recruit}</div>
+          <div>
+            <div className="n">{openHiring}</div>
+            <div className="l">Open hiring</div>
+          </div>
+        </div>
       </div>
 
       <div className="hr-panel">
         <div className="hr-toolbar">
-          <h3 style={{ margin: 0, flex: 1 }}>Today&apos;s attendance</h3>
+          <h3 className="hr-panel-title">
+            <span className="hr-panel-title-ico" aria-hidden>{Ico.clock}</span>
+            Today&apos;s attendance
+          </h3>
           <span className="hr-badge">{attendanceToday.length} records</span>
         </div>
         <div className="hr-table-wrap">
@@ -150,36 +284,85 @@ function Dashboard({ employees, leaves, attendanceToday, candidates, alerts, onS
         </div>
       </div>
 
-      <div className="hr-panel">
+      <div id="hr-alerts-section" className="hr-panel hr-alerts-panel">
         <div className="hr-toolbar">
-          <h3 style={{ margin: 0, flex: 1 }}>Alerts</h3>
-          <button type="button" className="hr-btn ghost" onClick={onSendWa}>Send WhatsApp reminders</button>
+          <h3 className="hr-panel-title">
+            <span className="hr-panel-title-ico" aria-hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </span>
+            Alerts
+          </h3>
+          <button type="button" className="hr-btn ghost" onClick={onSendWa}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M22 2L11 13" />
+              <path d="M22 2L15 22l-4-9-9-4 20-7z" />
+            </svg>
+            Send WhatsApp reminders
+          </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-          <div>
-            <h4 style={{ marginTop: 0 }}>Birthdays in 7 days</h4>
+
+        <div className="hr-alert-grid">
+          <div className="hr-alert-card hr-alert-card--birthday">
+            <div className="hr-alert-card-head">
+              <span className="hr-alert-card-ico" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#db2777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
+                  <path d="M4 16s.5-1 2-1 2.5 1 4 1 2.5-1 4-1 2.5 1 4 1 2-1 2-1" />
+                  <path d="M2 21h20" />
+                  <path d="M7 8v3" />
+                  <path d="M12 8v3" />
+                  <path d="M17 8v3" />
+                  <path d="M7 3h.01" />
+                  <path d="M12 3h.01" />
+                  <path d="M17 3h.01" />
+                </svg>
+              </span>
+              <div>
+                <div className="hr-alert-card-title">Birthdays in 7 days</div>
+                <div className="hr-alert-card-sub">{birthdays.length} upcoming</div>
+              </div>
+            </div>
             {!birthdays.length ? (
-              <div className="hr-empty">None upcoming.</div>
+              <div className="hr-alert-empty">No birthdays in the next week.</div>
             ) : (
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <ul className="hr-alert-list">
                 {birthdays.map((b) => (
-                  <li key={b.id || b.employee_id}>
-                    <b>{b.employee_name}</b> — {b.days_until === 0 ? 'Today' : `${b.days_until}d`} ({b.dob})
+                  <li key={b.id || b.employee_id} className="hr-alert-item">
+                    <span className="hr-alert-item-name">{b.employee_name}</span>
+                    <span className={`hr-badge ${b.days_until === 0 ? 'ok' : 'warn'}`}>
+                      {b.days_until === 0 ? 'Today' : `${b.days_until}d`}
+                    </span>
+                    <span className="hr-alert-item-meta">{b.dob}</span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          <div>
-            <h4 style={{ marginTop: 0 }}>Insurance due / overdue (≤4 days)</h4>
+
+          <div className="hr-alert-card hr-alert-card--insurance">
+            <div className="hr-alert-card-head">
+              <span className="hr-alert-card-ico" aria-hidden>{Ico.shield}</span>
+              <div>
+                <div className="hr-alert-card-title">Insurance due / overdue</div>
+                <div className="hr-alert-card-sub">Within 4 days · {insuranceDue.length} policies</div>
+              </div>
+            </div>
             {!insuranceDue.length ? (
-              <div className="hr-empty">None due soon.</div>
+              <div className="hr-alert-empty">No renewals due soon.</div>
             ) : (
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <ul className="hr-alert-list">
                 {insuranceDue.map((i) => (
-                  <li key={i.id}>
-                    <b>{i.employee_name}</b> — {i.policy_type} renew {i.renew_date}
-                    {' '}({i.days_until < 0 ? `overdue ${Math.abs(i.days_until)}d` : `${i.days_until}d`})
+                  <li key={i.id} className="hr-alert-item">
+                    <span className="hr-alert-item-name">{i.employee_name}</span>
+                    <span className={`hr-badge ${i.days_until < 0 ? 'bad' : 'warn'}`}>
+                      {i.days_until < 0 ? `Overdue ${Math.abs(i.days_until)}d` : `${i.days_until}d`}
+                    </span>
+                    <span className="hr-alert-item-meta">
+                      {i.policy_type} · renew {i.renew_date}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -558,8 +741,23 @@ function EmployeesView({ staff, loading, error, q, setQ, onReload, departments, 
                       <td>{u.whatsapp_number || '—'}</td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          <button type="button" className="hr-btn ghost" disabled={busy} onClick={() => openOnboardQr(u)}>
-                            QR
+                          <button
+                            type="button"
+                            className="hr-btn ghost hr-btn-icon"
+                            disabled={busy}
+                            onClick={() => openOnboardQr(u)}
+                            title="Joining form QR"
+                            aria-label="Joining form QR"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <rect x="3" y="3" width="7" height="7" rx="1" />
+                              <rect x="14" y="3" width="7" height="7" rx="1" />
+                              <rect x="3" y="14" width="7" height="7" rx="1" />
+                              <path d="M14 14h3v3h-3z" />
+                              <path d="M20 14v3" />
+                              <path d="M14 20h3" />
+                              <path d="M20 20h.01" />
+                            </svg>
                           </button>
                           {u.joining_form_submitted_at ? (
                             <button type="button" className="hr-btn ok" disabled={busy} onClick={() => downloadJoiningPdf(u)}>
@@ -577,7 +775,22 @@ function EmployeesView({ staff, loading, error, q, setQ, onReload, departments, 
                       </td>
                       <td>
                         {u.source === 'hr_only' ? (
-                          <button type="button" className="hr-btn ghost" disabled={busy} onClick={() => remove(u.id, u.full_name, u.source)}>Del</button>
+                          <button
+                            type="button"
+                            className="hr-btn ghost hr-btn-icon hr-btn-icon--danger"
+                            disabled={busy}
+                            onClick={() => remove(u.id, u.full_name, u.source)}
+                            title="Delete"
+                            aria-label="Delete"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                            </svg>
+                          </button>
                         ) : '—'}
                       </td>
                     </tr>
@@ -672,16 +885,19 @@ function AttendanceView() {
 
   return (
     <div className="hr-panel">
-      <div className="hr-toolbar">
-        <label>
-          From{' '}
+      <div className="hr-toolbar hr-date-row">
+        <label className="hr-field">
+          <span className="hr-field-label">From</span>
           <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
-        <label>
-          To{' '}
+        <label className="hr-field">
+          <span className="hr-field-label">To</span>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name / site…" />
+        <label className="hr-field" style={{ flex: '1 1 200px' }}>
+          <span className="hr-field-label">Search</span>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name / site…" />
+        </label>
         <button type="button" className="hr-btn ghost" onClick={load}>Refresh</button>
       </div>
       {error && <div className="hr-error">{error}</div>}
@@ -1214,6 +1430,14 @@ function InsuranceView({ employees }) {
   });
   const [dobForm, setDobForm] = useState({ employee_id: '', employee_name: '', dob: '', whatsapp_number: '' });
 
+  // Refs so the floating buttons can scroll straight to each form section.
+  const insuranceFormRef = useRef(null);
+  const birthdayFormRef = useRef(null);
+
+  const scrollToSection = (ref) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const load = useCallback(async () => {
     setBusy(true);
     setError('');
@@ -1420,7 +1644,7 @@ function InsuranceView({ employees }) {
         </div>
       </div>
 
-      <div className="hr-panel">
+      <div className="hr-panel hr-panel-insurance" ref={insuranceFormRef}>
         <h3 style={{ marginTop: 0 }}>Add / update insurance</h3>
         <p className="hr-sub">WhatsApp reminder ~8 AM IST, 3–4 days before renew (full Aadhaar/PAN/nominee pack to HR).</p>
         <div className="hr-form">
@@ -1472,7 +1696,7 @@ function InsuranceView({ employees }) {
         </div>
       </div>
 
-      <div className="hr-panel">
+      <div className="hr-panel hr-panel-birthday" ref={birthdayFormRef}>
         <h3 style={{ marginTop: 0 }}>Birthday profile (alerts)</h3>
         <p className="hr-sub">Save DOB so dashboard shows birthdays in 7 days and WhatsApp reminders can fire.</p>
         <div className="hr-form">
@@ -1503,6 +1727,27 @@ function InsuranceView({ employees }) {
             <button type="button" className="hr-btn" disabled={busy} onClick={saveDob}>Save DOB</button>
           </div>
         </div>
+      </div>
+
+      <div className="hr-fab-stack">
+        <button
+          type="button"
+          className="hr-fab hr-fab-insurance"
+          title="Go to Add / update insurance"
+          onClick={() => scrollToSection(insuranceFormRef)}
+        >
+          +
+          <span className="hr-fab-tip">Add insurance</span>
+        </button>
+        <button
+          type="button"
+          className="hr-fab hr-fab-birthday"
+          title="Go to Birthday profile"
+          onClick={() => scrollToSection(birthdayFormRef)}
+        >
+          +
+          <span className="hr-fab-tip">Add birthday</span>
+        </button>
       </div>
     </>
   );
@@ -1616,7 +1861,25 @@ function DocumentsView({ employees, user }) {
             </select>
           </label>
           <label>Title<input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
-          <label>File<input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} required /></label>
+          <div className="full hr-file">
+            <span className="hr-field-label">Attach document</span>
+            <div className="hr-file-box">
+              <label className="hr-file-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+                Choose file
+                <input
+                  type="file"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  required
+                />
+              </label>
+              <span className={`hr-file-name${file ? '' : ' is-empty'}`}>
+                {file ? file.name : 'No file selected — PDF / image / docs'}
+              </span>
+            </div>
+          </div>
           <div className="actions">
             <button type="submit" className="hr-btn" disabled={busy}>{busy ? 'Uploading…' : 'Upload to folder'}</button>
             <button type="button" className="hr-btn ghost" onClick={load}>Refresh folders</button>
@@ -2206,7 +2469,15 @@ function LettersView({ employees, onEmployeesReload, departments, designations }
 }
 
 export default function HrPortal({ user, onLogout, onOpenOffice }) {
+  
   const [tab, setTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isDark, setIsDark] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved) document.documentElement.setAttribute('data-theme', saved);
+    return saved === 'dark';
+  });
   const isAdminUser = String(user?.role || '').toLowerCase() === 'admin';
   const isHrUser = (() => {
     const role = String(user?.role || '').toLowerCase().trim();
@@ -2233,10 +2504,24 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
   const [attendanceToday, setAttendanceToday] = useState([]);
   const [recruitments, setRecruitments] = useState([]);
   const [alerts, setAlerts] = useState({ birthdays: [], insuranceDue: [] });
+  const [scrollToAlerts, setScrollToAlerts] = useState(false);
+
+  const alertCount = (alerts.birthdays?.length || 0) + (alerts.insuranceDue?.length || 0);
 
   useEffect(() => {
     if (tab === 'recruitment' && !canManageRecruitment) setTab('dashboard');
   }, [tab, canManageRecruitment]);
+
+  useEffect(() => {
+    const onResize = () => {
+      const mobile = window.innerWidth <= 999;
+      setIsMobile(mobile);
+      setSidebarOpen(!mobile);
+    };
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const loadEmployees = useCallback(async () => {
     setEmpLoading(true);
@@ -2320,80 +2605,174 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
     })();
   }, [loadEmployees, loadLeaves, loadRecruitments, loadAlerts]);
 
-  const title = useMemo(
-    () => navItems.find((n) => n.key === tab)?.label || NAV.find((n) => n.key === tab)?.label || 'HR',
+  useEffect(() => {
+    if (!scrollToAlerts || tab !== 'dashboard') return;
+    const t = window.setTimeout(() => {
+      document.getElementById('hr-alerts-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setScrollToAlerts(false);
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [scrollToAlerts, tab]);
+
+  const goToAlerts = () => {
+    if (tab !== 'dashboard') {
+      setTab('dashboard');
+      if (isMobile) setSidebarOpen(false);
+      setScrollToAlerts(true);
+      return;
+    }
+    document.getElementById('hr-alerts-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const activeNav = useMemo(
+    () => navItems.find((n) => n.key === tab) || NAV.find((n) => n.key === tab),
     [tab, navItems]
   );
+  const title = activeNav?.label || 'HR';
+
+  const goTab = (key) => {
+    setTab(key);
+    if (isMobile) setSidebarOpen(false);
+  };
+
+  const toggleTheme = () => {
+    const next = !isDark;
+    setIsDark(next);
+    const val = next ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', val);
+    localStorage.setItem('theme', val);
+  };
 
   return (
     <div className="hr-shell">
-      <aside className="hr-side">
-        <div className="hr-brand">DIP HRMS</div>
-        <p className="hr-brand-sub">HR · {user?.full_name || 'User'}</p>
-        {navItems.map((n) => (
-          <button
-            key={n.key}
-            type="button"
-            className={tab === n.key ? 'hr-nav-btn active' : 'hr-nav-btn'}
-            onClick={() => setTab(n.key)}
-          >
-            {n.label}
-          </button>
-        ))}
-        <div className="hr-side-foot">
-          {onOpenOffice && (
-            <button type="button" onClick={onOpenOffice}>Office TaskFlow</button>
-          )}
-          <button type="button" onClick={onLogout}>Log out</button>
-        </div>
-      </aside>
-      <main className="hr-main">
-        <h1>{title}</h1>
-        <p className="hr-sub">Human Resource Management — Dip Projects</p>
+      <Navbar
+        onMenuToggle={() => setSidebarOpen((p) => !p)}
+        menuOpen={sidebarOpen}
+        onLogout={onLogout}
+      />
 
-        {tab === 'dashboard' && (
-          <Dashboard
-            employees={employees}
-            leaves={leaves}
-            attendanceToday={attendanceToday}
-            candidates={canManageRecruitment ? recruitments : []}
-            alerts={alerts}
-            onSendWa={sendWaReminders}
+      <div className="hr-body">
+        {sidebarOpen && isMobile && (
+          <button
+            type="button"
+            className="hr-sb-backdrop"
+            onClick={() => setSidebarOpen(false)}
+            aria-label="Close sidebar"
           />
         )}
-        {tab === 'employees' && (
-          <EmployeesView
-            staff={employees}
-            loading={empLoading}
-            error={empError}
-            q={empQ}
-            setQ={setEmpQ}
-            onReload={loadEmployees}
-            departments={departments}
-            designations={designations}
-          />
-        )}
-        {tab === 'attendance' && <AttendanceView />}
-        {tab === 'leaves' && (
-          <LeavesView leaves={leaves} loading={leaveLoading} error={leaveError} onReload={loadLeaves} />
-        )}
-        {tab === 'recruitment' && canManageRecruitment && (
-          <RecruitmentView apiCandidates={recruitments} onReload={loadRecruitments} />
-        )}
-        {tab === 'insurance' && <InsuranceView employees={employees} />}
-        {tab === 'payroll' && <PayrollView employees={employees} />}
-        {tab === 'letters' && (
-          <LettersView
-            employees={employees}
-            onEmployeesReload={loadEmployees}
-            departments={departments}
-            designations={designations}
-          />
-        )}
-        {tab === 'documents' && (
-          <DocumentsView employees={employees} user={user} />
-        )}
-      </main>
+
+        <aside className={`hr-sidebar${sidebarOpen ? ' open' : ' closed'}`}>
+          <nav className="hr-snav">
+            {navItems.map((n) => (
+              <button
+                key={n.key}
+                type="button"
+                className={`hr-sni${tab === n.key ? ' active' : ''}`}
+                onClick={() => goTab(n.key)}
+              >
+                <span className="hr-sni-ico">{n.icon}</span>
+                <span>{n.label}</span>
+              </button>
+            ))}
+          </nav>
+          <div className="hr-side-foot">
+            {onOpenOffice && (
+              <button type="button" className="hr-sni" onClick={onOpenOffice}>
+                <span className="hr-sni-ico">{Ico.office}</span>
+                <span>Office TaskFlow</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="hr-theme-toggle"
+              onClick={toggleTheme}
+              title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              <span className="hr-theme-toggle-left">
+                {isDark ? Ico.sun : Ico.moon}
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </span>
+              <span className={`hr-theme-switch${isDark ? ' is-dark' : ''}`} aria-hidden>
+                <span className="hr-theme-knob" />
+              </span>
+            </button>
+          </div>
+        </aside>
+
+        <main className="hr-main">
+          <div className="hr-page-card">
+            <div className="hr-card-hdr">
+              <div className="hr-card-ico">{activeNav?.icon || Ico.dashboard}</div>
+              <div>
+                <h1 className="hr-card-title">{title}</h1>
+                <p className="hr-card-sub">Human Resource Management — Dip Projects</p>
+              </div>
+            </div>
+
+            {tab === 'dashboard' && (
+              <Dashboard
+                employees={employees}
+                leaves={leaves}
+                attendanceToday={attendanceToday}
+                candidates={canManageRecruitment ? recruitments : []}
+                alerts={alerts}
+                onSendWa={sendWaReminders}
+              />
+            )}
+            {tab === 'employees' && (
+              <EmployeesView
+                staff={employees}
+                loading={empLoading}
+                error={empError}
+                q={empQ}
+                setQ={setEmpQ}
+                onReload={loadEmployees}
+                departments={departments}
+                designations={designations}
+              />
+            )}
+            {tab === 'attendance' && <AttendanceView />}
+            {tab === 'leaves' && (
+              <LeavesView leaves={leaves} loading={leaveLoading} error={leaveError} onReload={loadLeaves} />
+            )}
+            {tab === 'recruitment' && canManageRecruitment && (
+              <RecruitmentView apiCandidates={recruitments} onReload={loadRecruitments} />
+            )}
+            {tab === 'insurance' && <InsuranceView employees={employees} />}
+            {tab === 'payroll' && <PayrollView employees={employees} />}
+            {tab === 'letters' && (
+              <LettersView
+                employees={employees}
+                onEmployeesReload={loadEmployees}
+                departments={departments}
+                designations={designations}
+              />
+            )}
+            {tab === 'documents' && (
+              <DocumentsView employees={employees} user={user} />
+            )}
+          </div>
+        </main>
+      </div>
+
+      {alertCount > 0 && (
+        <button
+          type="button"
+          className={`hr-alert-bell${tab === 'insurance' ? ' hr-alert-bell--raised' : ''}`}
+          onClick={goToAlerts}
+          title="View alerts"
+          aria-label={`${alertCount} alert${alertCount === 1 ? '' : 's'} — go to alerts`}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <span className="hr-alert-bell-count">{alertCount > 99 ? '99+' : alertCount}</span>
+          <span className="hr-alert-bell-tip">
+            {alertCount} alert{alertCount === 1 ? '' : 's'} — view
+          </span>
+        </button>
+      )}
     </div>
   );
 }
