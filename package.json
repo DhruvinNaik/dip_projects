@@ -1,5 +1,17 @@
 {
   "name": "dip-taskflow",
   "private": true,
-  "description": "DIP TaskFlow — Vercel deploys from repo root (see vercel.json)"
+  "description": "DIP TaskFlow — Vercel deploys from repo root (see vercel.json)",
+  "engines": {
+    "node": "20.x"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.0"
+  }
 }
