@@ -224,15 +224,42 @@ function Dashboard({ employees, leaves, attendanceToday, candidates, alerts, onS
   return (
     <>
       <div className="hr-cards">
-        <div className="hr-stat"><div className="n">{active}</div><div className="l">Active employees</div></div>
-        <div className="hr-stat"><div className="n">{present}</div><div className="l">Present today</div></div>
-        <div className="hr-stat"><div className="n">{pendingLeaves}</div><div className="l">Pending leaves</div></div>
-        <div className="hr-stat"><div className="n">{openHiring}</div><div className="l">Open hiring</div></div>
+        <div className="hr-stat hr-stat--blue">
+          <div className="hr-stat-ico" aria-hidden>{Ico.users}</div>
+          <div>
+            <div className="n">{active}</div>
+            <div className="l">Active employees</div>
+          </div>
+        </div>
+        <div className="hr-stat hr-stat--green">
+          <div className="hr-stat-ico" aria-hidden>{Ico.clock}</div>
+          <div>
+            <div className="n">{present}</div>
+            <div className="l">Present today</div>
+          </div>
+        </div>
+        <div className="hr-stat hr-stat--amber">
+          <div className="hr-stat-ico" aria-hidden>{Ico.leave}</div>
+          <div>
+            <div className="n">{pendingLeaves}</div>
+            <div className="l">Pending leaves</div>
+          </div>
+        </div>
+        <div className="hr-stat hr-stat--pink">
+          <div className="hr-stat-ico" aria-hidden>{Ico.recruit}</div>
+          <div>
+            <div className="n">{openHiring}</div>
+            <div className="l">Open hiring</div>
+          </div>
+        </div>
       </div>
 
       <div className="hr-panel">
         <div className="hr-toolbar">
-          <h3 style={{ margin: 0, flex: 1 }}>Today&apos;s attendance</h3>
+          <h3 className="hr-panel-title">
+            <span className="hr-panel-title-ico" aria-hidden>{Ico.clock}</span>
+            Today&apos;s attendance
+          </h3>
           <span className="hr-badge">{attendanceToday.length} records</span>
         </div>
         <div className="hr-table-wrap">
@@ -257,36 +284,85 @@ function Dashboard({ employees, leaves, attendanceToday, candidates, alerts, onS
         </div>
       </div>
 
-      <div className="hr-panel">
+      <div id="hr-alerts-section" className="hr-panel hr-alerts-panel">
         <div className="hr-toolbar">
-          <h3 style={{ margin: 0, flex: 1 }}>Alerts</h3>
-          <button type="button" className="hr-btn ghost" onClick={onSendWa}>Send WhatsApp reminders</button>
+          <h3 className="hr-panel-title">
+            <span className="hr-panel-title-ico" aria-hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </span>
+            Alerts
+          </h3>
+          <button type="button" className="hr-btn ghost" onClick={onSendWa}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M22 2L11 13" />
+              <path d="M22 2L15 22l-4-9-9-4 20-7z" />
+            </svg>
+            Send WhatsApp reminders
+          </button>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-          <div>
-            <h4 style={{ marginTop: 0 }}>Birthdays in 7 days</h4>
+
+        <div className="hr-alert-grid">
+          <div className="hr-alert-card hr-alert-card--birthday">
+            <div className="hr-alert-card-head">
+              <span className="hr-alert-card-ico" aria-hidden>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#db2777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8" />
+                  <path d="M4 16s.5-1 2-1 2.5 1 4 1 2.5-1 4-1 2.5 1 4 1 2-1 2-1" />
+                  <path d="M2 21h20" />
+                  <path d="M7 8v3" />
+                  <path d="M12 8v3" />
+                  <path d="M17 8v3" />
+                  <path d="M7 3h.01" />
+                  <path d="M12 3h.01" />
+                  <path d="M17 3h.01" />
+                </svg>
+              </span>
+              <div>
+                <div className="hr-alert-card-title">Birthdays in 7 days</div>
+                <div className="hr-alert-card-sub">{birthdays.length} upcoming</div>
+              </div>
+            </div>
             {!birthdays.length ? (
-              <div className="hr-empty">None upcoming.</div>
+              <div className="hr-alert-empty">No birthdays in the next week.</div>
             ) : (
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <ul className="hr-alert-list">
                 {birthdays.map((b) => (
-                  <li key={b.id || b.employee_id}>
-                    <b>{b.employee_name}</b> — {b.days_until === 0 ? 'Today' : `${b.days_until}d`} ({b.dob})
+                  <li key={b.id || b.employee_id} className="hr-alert-item">
+                    <span className="hr-alert-item-name">{b.employee_name}</span>
+                    <span className="hr-badge warn">
+                      {b.days_until === 0 ? 'Today' : `${b.days_until}d`}
+                    </span>
+                    <span className="hr-alert-item-meta">{b.dob}</span>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-          <div>
-            <h4 style={{ marginTop: 0 }}>Insurance due / overdue (≤4 days)</h4>
+
+          <div className="hr-alert-card hr-alert-card--insurance">
+            <div className="hr-alert-card-head">
+              <span className="hr-alert-card-ico" aria-hidden>{Ico.shield}</span>
+              <div>
+                <div className="hr-alert-card-title">Insurance due / overdue</div>
+                <div className="hr-alert-card-sub">Within 4 days · {insuranceDue.length} policies</div>
+              </div>
+            </div>
             {!insuranceDue.length ? (
-              <div className="hr-empty">None due soon.</div>
+              <div className="hr-alert-empty">No renewals due soon.</div>
             ) : (
-              <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <ul className="hr-alert-list">
                 {insuranceDue.map((i) => (
-                  <li key={i.id}>
-                    <b>{i.employee_name}</b> — {i.policy_type} renew {i.renew_date}
-                    {' '}({i.days_until < 0 ? `overdue ${Math.abs(i.days_until)}d` : `${i.days_until}d`})
+                  <li key={i.id} className="hr-alert-item">
+                    <span className="hr-alert-item-name">{i.employee_name}</span>
+                    <span className={`hr-badge ${i.days_until < 0 ? 'bad' : 'warn'}`}>
+                      {i.days_until < 0 ? `Overdue ${Math.abs(i.days_until)}d` : `${i.days_until}d`}
+                    </span>
+                    <span className="hr-alert-item-meta">
+                      {i.policy_type} · renew {i.renew_date}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -2398,6 +2474,9 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
   const [attendanceToday, setAttendanceToday] = useState([]);
   const [recruitments, setRecruitments] = useState([]);
   const [alerts, setAlerts] = useState({ birthdays: [], insuranceDue: [] });
+  const [scrollToAlerts, setScrollToAlerts] = useState(false);
+
+  const alertCount = (alerts.birthdays?.length || 0) + (alerts.insuranceDue?.length || 0);
 
   useEffect(() => {
     if (tab === 'recruitment' && !canManageRecruitment) setTab('dashboard');
@@ -2495,6 +2574,25 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
       }
     })();
   }, [loadEmployees, loadLeaves, loadRecruitments, loadAlerts]);
+
+  useEffect(() => {
+    if (!scrollToAlerts || tab !== 'dashboard') return;
+    const t = window.setTimeout(() => {
+      document.getElementById('hr-alerts-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setScrollToAlerts(false);
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [scrollToAlerts, tab]);
+
+  const goToAlerts = () => {
+    if (tab !== 'dashboard') {
+      setTab('dashboard');
+      if (isMobile) setSidebarOpen(false);
+      setScrollToAlerts(true);
+      return;
+    }
+    document.getElementById('hr-alerts-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const activeNav = useMemo(
     () => navItems.find((n) => n.key === tab) || NAV.find((n) => n.key === tab),
@@ -2626,6 +2724,25 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
           </div>
         </main>
       </div>
+
+      {alertCount > 0 && (
+        <button
+          type="button"
+          className={`hr-alert-bell${tab === 'insurance' ? ' hr-alert-bell--raised' : ''}`}
+          onClick={goToAlerts}
+          title="View alerts"
+          aria-label={`${alertCount} alert${alertCount === 1 ? '' : 's'} — go to alerts`}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <span className="hr-alert-bell-count">{alertCount > 99 ? '99+' : alertCount}</span>
+          <span className="hr-alert-bell-tip">
+            {alertCount} alert{alertCount === 1 ? '' : 's'} — view
+          </span>
+        </button>
+      )}
     </div>
   );
 }
