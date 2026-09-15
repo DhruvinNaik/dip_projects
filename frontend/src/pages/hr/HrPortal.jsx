@@ -748,8 +748,23 @@ function EmployeesView({ staff, loading, error, q, setQ, onReload, departments, 
                       <td>{u.whatsapp_number || '—'}</td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          <button type="button" className="hr-btn ghost" disabled={busy} onClick={() => openOnboardQr(u)}>
-                            QR
+                          <button
+                            type="button"
+                            className="hr-btn ghost hr-btn-icon"
+                            disabled={busy}
+                            onClick={() => openOnboardQr(u)}
+                            title="Joining form QR"
+                            aria-label="Joining form QR"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <rect x="3" y="3" width="7" height="7" rx="1" />
+                              <rect x="14" y="3" width="7" height="7" rx="1" />
+                              <rect x="3" y="14" width="7" height="7" rx="1" />
+                              <path d="M14 14h3v3h-3z" />
+                              <path d="M20 14v3" />
+                              <path d="M14 20h3" />
+                              <path d="M20 20h.01" />
+                            </svg>
                           </button>
                           {u.joining_form_submitted_at ? (
                             <button type="button" className="hr-btn ok" disabled={busy} onClick={() => downloadJoiningPdf(u)}>
@@ -767,7 +782,22 @@ function EmployeesView({ staff, loading, error, q, setQ, onReload, departments, 
                       </td>
                       <td>
                         {u.source === 'hr_only' ? (
-                          <button type="button" className="hr-btn ghost" disabled={busy} onClick={() => remove(u.id, u.full_name, u.source)}>Del</button>
+                          <button
+                            type="button"
+                            className="hr-btn ghost hr-btn-icon hr-btn-icon--danger"
+                            disabled={busy}
+                            onClick={() => remove(u.id, u.full_name, u.source)}
+                            title="Delete"
+                            aria-label="Delete"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M3 6h18" />
+                              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                            </svg>
+                          </button>
                         ) : '—'}
                       </td>
                     </tr>
