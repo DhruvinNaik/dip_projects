@@ -2522,25 +2522,57 @@ export default function TaskflowDom() {
           </div>
         </div>
 
-        {/* Monthly day-of-month picker */}
+        {/* Monthly duration window (from–to days each month) */}
         <div className="field" id="monthlyDayField" hidden={true}>
-          <label htmlFor="rec-monthly-day">Day of month <span className="req">*</span></label>
-          <select id="rec-monthly-day" defaultValue="1">
-            {Array.from({ length: 31 }, (_, i) => {
-              const d = i + 1;
-              const suf =
-                d === 1 || d === 21 || d === 31 ? 'st'
-                  : d === 2 || d === 22 ? 'nd'
-                    : d === 3 || d === 23 ? 'rd'
-                      : 'th';
-              return (
-                <option key={d} value={d}>
-                  {d}{suf} of every month
-                </option>
-              );
-            })}
+          <label>Duration each month <span className="req">*</span></label>
+          <div className="field-grid" id="monthlyDurationFields">
+            <div className="field">
+              <label htmlFor="rec-monthly-from">From day <span className="req">*</span></label>
+              <select id="rec-monthly-from" defaultValue="1">
+                {Array.from({ length: 31 }, (_, i) => {
+                  const d = i + 1;
+                  const suf =
+                    d === 1 || d === 21 || d === 31 ? 'st'
+                      : d === 2 || d === 22 ? 'nd'
+                        : d === 3 || d === 23 ? 'rd'
+                          : 'th';
+                  return (
+                    <option key={`from-${d}`} value={d}>
+                      {d}{suf}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="rec-monthly-to">To day <span className="req">*</span></label>
+              <select id="rec-monthly-to" defaultValue="1">
+                {Array.from({ length: 31 }, (_, i) => {
+                  const d = i + 1;
+                  const suf =
+                    d === 1 || d === 21 || d === 31 ? 'st'
+                      : d === 2 || d === 22 ? 'nd'
+                        : d === 3 || d === 23 ? 'rd'
+                          : 'th';
+                  return (
+                    <option key={`to-${d}`} value={d}>
+                      {d}{suf}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+          <p className="form-note">
+            Task is created every day from <strong>from</strong> through <strong>to</strong> each month
+            (e.g. 14th–17th), then waits until next month. Short months: days past month-end use the last day.
+          </p>
+          {/* Kept for older JS that still reads this id — synced with From day */}
+          <select id="rec-monthly-day" defaultValue="1" hidden aria-hidden="true">
+            {Array.from({ length: 31 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>{i + 1}</option>
+            ))}
           </select>
-          <p className="form-note">Short months (e.g. Feb): if day is past month-end, task fires on last day.</p>
         </div>
 
         {/* Active period */}

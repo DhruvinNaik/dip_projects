@@ -109,7 +109,7 @@ create table if not exists recurring_tasks (
   description text not null,
   priority text not null default 'Medium' check (priority in ('Low', 'Medium', 'High')),
   frequency text not null check (frequency in ('Daily', 'Weekly', 'Monthly', 'Yearly')),
-  frequency_days text, -- comma-separated day numbers (0=Sun..6=Sat), only used for Weekly
+  frequency_days text, -- Weekly: 0-6 CSV. Monthly: day "5" or range "1-5" (daily instances each month)
   start_date date not null,
   end_date date,
   is_active boolean not null default true,

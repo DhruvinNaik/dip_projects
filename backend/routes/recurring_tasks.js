@@ -64,6 +64,37 @@ function isInstanceClosed(status) {
 
 // Date-agnostic version of "should this task fire on this particular day" —
 // lets us check any day in the backfill window, not just today.
+function parseMonthlyDayRange(frequencyDays, startDate) {
+  const raw = String(frequencyDays || '').trim();
+  const rangeMatch = raw.match(/^(\d{1,2})\s*-\s*(\d{1,2})$/);
+  let from;
+  let to;
+  if (rangeMatch) {
+    from = Number(rangeMatch[1]);
+    to = Number(rangeMatch[2]);
+  } else {
+    const first = Number(String(raw).split(',')[0].trim());
+    from = first;
+    to = first;
+  }
+  if (!Number.isFinite(from) || from < 1 || from > 31) {
+    from = startDate instanceof Date && !Number.isNaN(startDate.getTime())
+      ? startDate.getDate()
+      : 1;
+  }
+  if (!Number.isFinite(to) || to < 1 || to > 31) {
+    to = from;
+  }
+  from = Math.min(31, Math.max(1, Math.floor(from)));
+  to = Math.min(31, Math.max(1, Math.floor(to)));
+  if (to < from) {
+    const swap = from;
+    from = to;
+    to = swap;
+  }
+  return { from, to };
+}
+
 function shouldFireOn(task, date) {
   const start = new Date(task.start_date);
   const end = task.end_date ? new Date(task.end_date) : null;
@@ -79,17 +110,16 @@ function shouldFireOn(task, date) {
     return days.includes(date.getDay());
   }
   if (freq === 'Monthly') {
-    // Prefer explicit day-of-month in frequency_days; fall back to start_date day
-    const raw = String(task.frequency_days || '').split(',')[0].trim();
-    let wanted = Number(raw);
-    if (!Number.isFinite(wanted) || wanted < 1 || wanted > 31) {
-      wanted = start.getDate();
-    }
+    // frequency_days: "5" (single day) or "1-5" (inclusive day-of-month window).
+    // Window means one instance per calendar day from `from` through `to` each month.
+    const { from, to } = parseMonthlyDayRange(task.frequency_days, start);
     const y = date.getFullYear();
     const m = date.getMonth();
     const lastDay = new Date(y, m + 1, 0).getDate();
-    const fireDay = Math.min(wanted, lastDay);
-    return date.getDate() === fireDay;
+    const fromDay = Math.min(from, lastDay);
+    const toDay = Math.min(to, lastDay);
+    const day = date.getDate();
+    return day >= fromDay && day <= toDay;
   }
   if (freq === 'Yearly') return date.getDate() === start.getDate() && date.getMonth() === start.getMonth();
   return false;
@@ -203,11 +233,26 @@ router.post('/', requireAdmin, async (req, res) => {
     if (frequency === 'Weekly' && (!frequency_days || frequency_days.length === 0)) {
       return res.status(400).json({ error: 'Please select at least one day for weekly tasks' });
     }
+    let storedFrequencyDays = null;
+    if (frequency === 'Weekly') {
+      storedFrequencyDays = Array.isArray(frequency_days)
+        ? frequency_days.join(',')
+        : frequency_days;
+    }
     if (frequency === 'Monthly') {
-      const day = Number(Array.isArray(frequency_days) ? frequency_days[0] : String(frequency_days || '').split(',')[0]);
-      if (!Number.isFinite(day) || day < 1 || day > 31) {
-        return res.status(400).json({ error: 'Please select a day of the month (1–31) for monthly tasks' });
+      let raw = '';
+      if (Array.isArray(frequency_days) && frequency_days.length >= 2) {
+        raw = `${frequency_days[0]}-${frequency_days[1]}`;
+      } else if (Array.isArray(frequency_days) && frequency_days.length === 1) {
+        raw = String(frequency_days[0]);
+      } else {
+        raw = String(frequency_days || '');
       }
+      const { from, to } = parseMonthlyDayRange(raw, new Date(start_date));
+      if (!Number.isFinite(from) || from < 1 || from > 31 || !Number.isFinite(to) || to < 1 || to > 31) {
+        return res.status(400).json({ error: 'Please select a valid monthly duration (from/to days 1–31)' });
+      }
+      storedFrequencyDays = from === to ? String(from) : `${from}-${to}`;
     }
 
     const { data: rt, error } = await supabase
@@ -221,9 +266,7 @@ router.post('/', requireAdmin, async (req, res) => {
         description,
         priority: priority || 'Medium',
         frequency,
-        frequency_days: (frequency === 'Weekly' || frequency === 'Monthly')
-          ? (Array.isArray(frequency_days) ? frequency_days.join(',') : frequency_days)
-          : null,
+        frequency_days: storedFrequencyDays,
         start_date,
         end_date: end_date || null,
         is_active: true
@@ -382,18 +425,33 @@ router.patch('/:id', requireAdmin, async (req, res) => {
     for (const f of allowed) {
       if (req.body[f] !== undefined) updates[f] = req.body[f];
     }
-    if (updates.frequency_days && Array.isArray(updates.frequency_days)) {
-      updates.frequency_days = updates.frequency_days.join(',');
+    if (updates.frequency_days !== undefined) {
+      if (Array.isArray(updates.frequency_days)) {
+        const isMonthly =
+          updates.frequency === 'Monthly' ||
+          (!updates.frequency && req.body.frequency === 'Monthly');
+        if (isMonthly && updates.frequency_days.length >= 2) {
+          updates.frequency_days = `${updates.frequency_days[0]}-${updates.frequency_days[1]}`;
+        } else {
+          updates.frequency_days = updates.frequency_days.join(',');
+        }
+      }
     }
     // When switching away from Weekly/Monthly, clear day list unless provided
     if (updates.frequency && updates.frequency !== 'Weekly' && updates.frequency !== 'Monthly') {
       if (updates.frequency_days === undefined) updates.frequency_days = null;
     }
-    if (updates.frequency === 'Monthly') {
-      const day = Number(String(updates.frequency_days || '').split(',')[0]);
-      if (!Number.isFinite(day) || day < 1 || day > 31) {
-        return res.status(400).json({ error: 'Please select a day of the month (1–31) for monthly tasks' });
+    const effectiveFreq = updates.frequency || req.body.frequency;
+    if (effectiveFreq === 'Monthly' && updates.frequency_days !== undefined) {
+      const startHint = updates.start_date || req.body.start_date || null;
+      const { from, to } = parseMonthlyDayRange(
+        updates.frequency_days,
+        startHint ? new Date(startHint) : new Date()
+      );
+      if (!Number.isFinite(from) || from < 1 || from > 31 || !Number.isFinite(to) || to < 1 || to > 31) {
+        return res.status(400).json({ error: 'Please select a valid monthly duration (from/to days 1–31)' });
       }
+      updates.frequency_days = from === to ? String(from) : `${from}-${to}`;
     }
 
     const { data, error } = await supabase

@@ -493,7 +493,30 @@ function shouldFireOn(task, date) {
       .map(Number);
     return days.includes(date.getDay());
   }
-  if (freq === 'Monthly') return date.getDate() === start.getDate();
+  if (freq === 'Monthly') {
+    const raw = String(task.frequency_days || '').trim();
+    const rangeMatch = raw.match(/^(\d{1,2})\s*-\s*(\d{1,2})$/);
+    let from;
+    let to;
+    if (rangeMatch) {
+      from = Number(rangeMatch[1]);
+      to = Number(rangeMatch[2]);
+    } else {
+      const first = Number(raw.split(',')[0].trim());
+      from = Number.isFinite(first) && first >= 1 && first <= 31 ? first : start.getDate();
+      to = from;
+    }
+    if (!Number.isFinite(from) || from < 1 || from > 31) from = start.getDate();
+    if (!Number.isFinite(to) || to < 1 || to > 31) to = from;
+    if (to < from) {
+      const swap = from;
+      from = to;
+      to = swap;
+    }
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const day = date.getDate();
+    return day >= Math.min(from, lastDay) && day <= Math.min(to, lastDay);
+  }
   if (freq === 'Yearly') return date.getDate() === start.getDate() && date.getMonth() === start.getMonth();
   return false;
 }
