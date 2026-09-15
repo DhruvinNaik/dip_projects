@@ -2545,8 +2545,10 @@ useEffect(() => {
       setActiveTab("report-submissions");
       if (window.innerWidth <= 999) setSidebarOpen(false);
       requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-        if (mainRef.current) mainRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo(0, 0);
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        if (mainRef.current) mainRef.current.scrollTop = 0;
       });
       return;
     }
@@ -2555,11 +2557,14 @@ useEffect(() => {
     if (window.innerWidth <= 999) setSidebarOpen(false);
 
     requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
-      document.body.scrollTo({ top: 0, behavior: "smooth" });
-      if (mainRef.current)
-        mainRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      if (mainRef.current) mainRef.current.scrollTop = 0;
+      window.setTimeout(() => {
+        window.scrollTo(0, 0);
+        if (mainRef.current) mainRef.current.scrollTop = 0;
+      }, 40);
     });
   };
 

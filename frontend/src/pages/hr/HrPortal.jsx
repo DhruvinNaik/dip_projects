@@ -2655,17 +2655,26 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
   );
   const title = activeNav?.label || 'HR';
 
+  const scrollPageToTop = () => {
+    const run = () => {
+      window.scrollTo(0, 0);
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      const main = document.querySelector('.hr-main');
+      if (main) main.scrollTop = 0;
+    };
+    run();
+    requestAnimationFrame(() => {
+      run();
+      // After the new tab paints
+      window.setTimeout(run, 40);
+    });
+  };
+
   const goTab = (key) => {
     setTab(key);
     if (isMobile) setSidebarOpen(false);
-    // Always bring the opened section into view (all screen sizes)
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
-      document.body.scrollTo({ top: 0, behavior: 'smooth' });
-      document.querySelector('.hr-main')?.scrollTo({ top: 0, behavior: 'smooth' });
-      document.querySelector('.hr-page-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    scrollPageToTop();
   };
 
   const toggleTheme = () => {

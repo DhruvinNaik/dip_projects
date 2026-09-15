@@ -3649,11 +3649,16 @@ useEffect(() => {
                 onClick={() => {
                   setActiveTab(n.key);
                   if (window.innerWidth <= 999) setSidebarOpen(false);
+                  const run = () => {
+                    window.scrollTo(0, 0);
+                    document.documentElement.scrollTop = 0;
+                    document.body.scrollTop = 0;
+                    const main = document.querySelector(".main");
+                    if (main) main.scrollTop = 0;
+                  };
                   requestAnimationFrame(() => {
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                    document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
-                    document.body.scrollTo({ top: 0, behavior: "smooth" });
-                    document.querySelector(".main")?.scrollTo({ top: 0, behavior: "smooth" });
+                    run();
+                    window.setTimeout(run, 40);
                   });
                 }}
                 onMouseEnter={() => setHoveredNavKey(n.key)}
