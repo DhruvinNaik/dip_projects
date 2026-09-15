@@ -3,7 +3,7 @@
   "private": true,
   "description": "DIP TaskFlow — Vercel deploys from repo root (see vercel.json)",
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

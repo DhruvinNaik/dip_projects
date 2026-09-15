@@ -29,6 +29,7 @@ function lazyChunk(loader) {
 const TaskflowApp = lazyChunk(() => import('./pages/TaskflowApp'));
 const SiteApp = lazyChunk(() => import('./pages/SiteApp'));
 const MdoApp = lazyChunk(() => import('./pages/MdoApp'));
+
 const ClientApp = lazyChunk(() => import('./pages/ClientApp'));
 const HrApp = lazyChunk(() => import('./pages/HrApp'));
 const CandidateApplyPage = lazyChunk(() => import('./pages/public/CandidateApplyPage'));
