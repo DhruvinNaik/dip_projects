@@ -148,8 +148,8 @@ export function postLoginPath(user) {
   if (isClient(user)) return '/client';
   if (isHr(user)) return '/hr';
   if (isProcessController(user) || user.can_switch_office_mdo) return processControllerPath();
-  const dept = (user.department || '').trim().toLowerCase();
-  if (dept === 'site engineer') return '/site';
+  // Site Engineer dept / Site Incharge / Site Engineer roles → Site portal only
+  if (isSitePortalOnlyStaff(user)) return '/site';
   return '/app';
 }
 
@@ -164,14 +164,29 @@ export function isSiteEngineer(user) {
   return (user?.department || '').trim().toLowerCase() === 'site engineer';
 }
 
+/**
+ * Field staff who only use the Site portal (no Office TaskFlow, no Office↔Site toggle).
+ * Site Engineer department, Site Engineer / Site Incharge / Site Coordinator roles.
+ */
+export function isSitePortalOnlyStaff(user) {
+  if (!user) return false;
+  if (isSiteEngineer(user)) return true;
+  const blob = [user.role, user.designation, user.site_role]
+    .map((s) => String(s || '').toLowerCase())
+    .join(' ');
+  return /jr\.?\s*site engineer|junior site engineer|site engineer|site incharge|site coordinator/.test(
+    blob
+  );
+}
+
 /** People who work on site (clock-in, own DPR). Not office heads. */
 export function isOnSiteStaff(user) {
   if (!user) return false;
-  if (isSiteEngineer(user)) return true;
+  if (isSitePortalOnlyStaff(user)) return true;
   const blob = [user.role, user.designation, user.department, user.site_role]
     .map((s) => String(s || '').toLowerCase())
     .join(' ');
-  return /jr\.?\s*site engineer|junior site engineer|site engineer|site incharge|site coordinator|co-?ordinator/.test(blob);
+  return /co-?ordinator/.test(blob);
 }
 
 /** Office head on Site view: only their team's submitted reports. */
@@ -203,20 +218,19 @@ export function isSiteHead(user) {
 }
 
 export function canToggleSite(user) {
-  // Clients never toggle. Admin / Head / permission toggle / known site roles.
+  // Clients never toggle. Site field staff never toggle (Site portal only).
   if (!user || isClient(user)) return false;
+  if (isSitePortalOnlyStaff(user)) return false;
+
   const role = (user.role || '').toLowerCase().trim();
   if (role === 'admin' || role === 'head') return true;
-  if (user.can_switch_office_site || user.is_head || user.can_access_site) return true;
-  if (isSiteEngineer(user)) return false;
+  // Explicit Manage-Employees permission
+  if (user.can_switch_office_site) return true;
+  // Office heads who may also open Site
+  if (user.is_head) return true;
+
   const desig = (user.designation || '').toLowerCase().trim();
-  return (
-    desig === 'project head' ||
-    desig === 'site incharge' ||
-    desig === 'site head' ||
-    desig === 'head' ||
-    /co-?ordinator/.test(desig)
-  );
+  return desig === 'project head' || desig === 'site head' || desig === 'head';
 }
 
 /** Office ↔ MDO: Process Controller by role, or Permissions toggle. */

@@ -80,11 +80,11 @@ const WDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const LEAVE_TYPES = [
   "Casual Leave",
-  "Sick Leave",
+  "Compensatory Leave",
   "Earned Leave",
   "Maternity Leave",
   "Paternity Leave",
-  "Compensatory Leave",
+  "Sick Leave",
   "Unpaid Leave",
 ];
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -1269,12 +1269,16 @@ function ApplyLeave({ user }) {
   const monthlyScheme = isMonthlyLeaveRole(user);
   const applicantRole = user.role || user.designation || "";
 
-  const sites =
+  const sites = (
     Array.isArray(user.site_names) && user.site_names.length
       ? user.site_names
       : user.site_name
         ? [user.site_name]
-        : [];
+        : []
+  )
+    .map((s) => String(s || "").trim())
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   const site = selectedSite || sites[0] || "";
   const sitesKey = sites.join("|");
 
@@ -2705,7 +2709,7 @@ useEffect(() => {
 
         const reportSites = [
           ...new Set(teamReports.map((r) => r.site).filter(Boolean)),
-        ].sort();
+        ].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
         const withPdf = monthFiltered.filter((r) => r.pdf_url).length;
 
         // Group by date

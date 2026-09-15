@@ -175,17 +175,17 @@ const RECRUIT_STATUSES = [
 
 const DOC_TYPES = [
   'Aadhaar',
-  'PAN',
+  'Bank details',
   'CV',
+  'Education certificate',
+  'Experience letter',
+  'Insurance',
+  'Offer letter copy',
+  'Other',
+  'PAN',
+  'PF / ESI',
   'Photo',
   'Salary slip',
-  'Insurance',
-  'PF / ESI',
-  'Bank details',
-  'Offer letter copy',
-  'Experience letter',
-  'Education certificate',
-  'Other',
 ];
 
 function todayISO() {
@@ -375,32 +375,32 @@ function Dashboard({ employees, leaves, attendanceToday, candidates, alerts, onS
 }
 
 const HR_DEPARTMENTS_FALLBACK = [
+  'Accounts',
+  'Admin',
   'Engg. Division',
+  'General',
+  'HR',
   'MDO OFFICE',
   'PMC',
   'Sales',
-  'Accounts',
-  'HR',
-  'Admin',
-  'General',
 ];
 
 const HR_DESIGNATIONS_FALLBACK = [
-  'Site Engineer',
-  'Site Incharge',
-  'Site Head',
-  'SITE HEAD',
-  'Team lead',
   'Coordinator',
-  'Office Head',
+  'EA',
   'Estimator',
-  'Sr Estimator',
   'JR.ESTIMATOR',
   'Jr. Estimator',
   'MIS',
-  'EA',
+  'Office Head',
+  'SITE HEAD',
   'Sales Executive',
+  'Site Engineer',
+  'Site Head',
+  'Site Incharge',
+  'Sr Estimator',
   'Staff',
+  'Team lead',
 ];
 
 /** Select + optional custom designation via "+" */
@@ -410,6 +410,7 @@ function DesignationPicker({ value, onChange, designations, required }) {
   ['Estimator', 'Sr Estimator'].forEach((d) => {
     if (!list.includes(d)) list.push(d);
   });
+  list.sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
   const inList = list.includes(value);
   const [customMode, setCustomMode] = useState(!inList && !!value);
 
@@ -480,8 +481,10 @@ function asEmpShape(s) {
 }
 
 function EmployeesView({ staff, loading, error, q, setQ, onReload, departments, designations }) {
-  const depts = departments?.length ? departments : HR_DEPARTMENTS_FALLBACK;
-  const desigs = designations?.length ? designations : HR_DESIGNATIONS_FALLBACK;
+  const depts = [...(departments?.length ? departments : HR_DEPARTMENTS_FALLBACK)]
+    .sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+  const desigs = [...(designations?.length ? designations : HR_DESIGNATIONS_FALLBACK)]
+    .sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
   const [busy, setBusy] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [qrModal, setQrModal] = useState(null); // { title, url, qr }
@@ -495,7 +498,8 @@ function EmployeesView({ staff, loading, error, q, setQ, onReload, departments, 
     email: '',
   });
 
-  const filtered = staff.filter((u) => {
+  const filtered = staff
+    .filter((u) => {
     const blob = `${u.department || ''} ${u.designation || ''} ${u.role || ''} ${u.username || ''}`.toLowerCase();
     if (/\bclient\b/.test(blob)) return false;
     const s = q.trim().toLowerCase();
@@ -507,7 +511,10 @@ function EmployeesView({ staff, loading, error, q, setQ, onReload, departments, 
       (u.username || '').toLowerCase().includes(s) ||
       (u.whatsapp_number || '').includes(s)
     );
-  });
+  })
+    .sort((a, b) =>
+      String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+    );
 
   const openOnboardQr = async (emp) => {
     setBusy(true);
@@ -2035,8 +2042,10 @@ function PayrollView({ employees }) {
 }
 
 function LettersView({ employees, onEmployeesReload, departments, designations }) {
-  const depts = departments?.length ? departments : HR_DEPARTMENTS_FALLBACK;
-  const desigs = designations?.length ? designations : HR_DESIGNATIONS_FALLBACK;
+  const depts = [...(departments?.length ? departments : HR_DEPARTMENTS_FALLBACK)]
+    .sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
+  const desigs = [...(designations?.length ? designations : HR_DESIGNATIONS_FALLBACK)]
+    .sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: 'base' }));
   const [letterTab, setLetterTab] = useState('exp');
   const [busy, setBusy] = useState(false);
   const [nameMode, setNameMode] = useState('new'); // new | existing
@@ -2499,9 +2508,25 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
     try {
       const data = await api('/hr/staff');
       const list = (data.staff || []).map(asEmpShape);
-      setEmployees(list);
-      if (data.departments?.length) setDepartments(data.departments);
-      if (data.designations?.length) setDesignations(data.designations);
+      setEmployees(
+        [...list].sort((a, b) =>
+          String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+        )
+      );
+      if (data.departments?.length) {
+        setDepartments(
+          [...data.departments].sort((a, b) =>
+            String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
+          )
+        );
+      }
+      if (data.designations?.length) {
+        setDesignations(
+          [...data.designations].sort((a, b) =>
+            String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
+          )
+        );
+      }
     } catch (e) {
       setEmpError(e.message || 'Failed to load HR employees');
       setEmployees([]);

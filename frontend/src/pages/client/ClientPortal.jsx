@@ -2297,12 +2297,14 @@ function assignedSitesFromUser(u) {
           ? [primary]
           : [];
   const seen = new Set();
-  return combined.filter((s) => {
-    const key = String(s || "").trim().toLowerCase();
-    if (!key || seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  return combined
+    .filter((s) => {
+      const key = String(s || "").trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => String(a).localeCompare(String(b), undefined, { sensitivity: "base" }));
 }
 
 export default function ClientPortal() {

@@ -29,8 +29,8 @@ export default function Sites() {
     setError('');
     try {
       const [sites, emps] = await Promise.all([api('/sites'), api('/master/employees')]);
-      setRows(Array.isArray(sites) ? sites : []);
-      setPeople(Array.isArray(emps) ? emps : []);
+      setRows(Array.isArray(sites) ? [...sites].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })) : []);
+      setPeople(Array.isArray(emps) ? [...emps].sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })) : []);
     } catch (e) {
       setError(e.message || 'Failed to load sites');
     } finally {
@@ -94,10 +94,10 @@ export default function Sites() {
           <label>
             Type
             <select value={form.project_type} onChange={(e) => set('project_type', e.target.value)}>
-              <option>Residential</option>
               <option>Commercial</option>
               <option>Industrial</option>
               <option>Infrastructure</option>
+              <option>Residential</option>
             </select>
           </label>
           <label>

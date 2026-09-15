@@ -164,7 +164,7 @@ function uniqueSites(...lists) {
     seen.add(key);
     out.push(v);
   });
-  return out;
+  return out.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
 function isSiteDeptUser(u) {
@@ -209,13 +209,16 @@ async function loadHeadTeam(headId, jwtUser) {
     ...team.flatMap((u) => parseSiteList(u.site_names)),
     ...headSites,
   );
+  team.sort((a, b) =>
+    String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+  );
   const names = [];
   team.forEach((u) => {
     if (u.full_name) names.push(String(u.full_name).trim());
     if (u.username) names.push(String(u.username).trim());
   });
 
-  return { team, sites: teamSites, names: uniqueSites(names), head };
+  return { team, sites: teamSites, names: uniqueSites(names).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })), head };
 }
 
 /** People who report to the logged-in head — used for Site team submissions. */

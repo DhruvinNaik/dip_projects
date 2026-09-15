@@ -2893,8 +2893,8 @@ const NAV_COLORS = {
 };
 
 const LEAVE_TYPES = [
-  "Casual Leave", "Sick Leave", "Earned Leave",
-  "Maternity Leave", "Paternity Leave", "Compensatory Leave", "Unpaid Leave",
+  "Casual Leave", "Compensatory Leave", "Earned Leave",
+  "Maternity Leave", "Paternity Leave", "Sick Leave", "Unpaid Leave",
 ];
 export function deriveLeaveStatus(levelApproved, headApproved) {
   if (levelApproved === false || headApproved === false) return "rejected";
@@ -3611,7 +3611,7 @@ useEffect(() => {
       : user.site_name
         ? [user.site_name]
         : []
-  );
+  ).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   const sites = ownSites.length ? ownSites : allSites;
   const NAV = getNavItems(user);
   const activeItem = NAV.find((n) => n.key === activeTab);

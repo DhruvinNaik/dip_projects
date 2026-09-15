@@ -280,7 +280,9 @@ function fillSelect(select, items, { placeholder, valueKey = 'id', labelKey = 'n
     opt.value = ''; opt.textContent = placeholder;
     select.appendChild(opt);
   }
-  items.forEach((item) => {
+  [...(items || [])].sort((a, b) =>
+    String(a?.[labelKey] ?? '').localeCompare(String(b?.[labelKey] ?? ''), undefined, { sensitivity: 'base' })
+  ).forEach((item) => {
     const opt = document.createElement('option');
     opt.value = item[valueKey]; opt.textContent = item[labelKey];
     select.appendChild(opt);
@@ -3268,7 +3270,9 @@ window.addEventListener('resize', () => {
 async function loadPermissions() {
   els.permissionsTableBody.innerHTML = `<tr><td colspan="6" class="empty-state">Loading employees…</td></tr>`;
   try {
-    const employees = await api('/employees');
+    const employees = (await api('/employees')).sort((a, b) =>
+      String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+    );
     renderPermissionsTable(employees);
   } catch (err) { showToast(err.message, 'error'); }
 }
@@ -3278,7 +3282,10 @@ function renderPermissionsTable(employees) {
     return;
   }
   els.permissionsTableBody.innerHTML = '';
-  employees.forEach((emp) => {
+  const sorted = [...employees].sort((a, b) =>
+    String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+  );
+  sorted.forEach((emp) => {
     const tr = document.createElement('tr');
     const isAdminRow = emp.role === 'admin';
     tr.innerHTML = `

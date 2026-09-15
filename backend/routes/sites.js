@@ -19,11 +19,11 @@ function isMissingPcColumn(err) {
 
 async function fetchProjects(order = true) {
   let q = supabase.from('projects').select(SITE_SELECT);
-  if (order) q = q.order('created_at', { ascending: false });
+  if (order) q = q.order('name', { ascending: true });
   let { data, error } = await q;
   if (error && isMissingPcColumn(error)) {
     let retry = supabase.from('projects').select(SITE_SELECT_BASE);
-    if (order) retry = retry.order('created_at', { ascending: false });
+    if (order) retry = retry.order('name', { ascending: true });
     ({ data, error } = await retry);
   }
   if (error) throw error;

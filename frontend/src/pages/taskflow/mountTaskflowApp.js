@@ -371,6 +371,12 @@ export async function mountTaskflowApp(opts = {}) {
     }
     return data;
   }
+  function sortByLabel(items, labelKey = 'name') {
+    return [...(items || [])].sort((a, b) =>
+      String(a?.[labelKey] ?? a ?? '').localeCompare(String(b?.[labelKey] ?? b ?? ''), undefined, { sensitivity: 'base' })
+    );
+  }
+
   function fillSelect(select, items, { placeholder, valueKey = 'id', labelKey = 'name', extraOption } = {}) {
     if (!select) return;
     select.innerHTML = '';
@@ -379,7 +385,7 @@ export async function mountTaskflowApp(opts = {}) {
       opt.value = ''; opt.textContent = placeholder;
       select.appendChild(opt);
     }
-    items.forEach((item) => {
+    sortByLabel(items, labelKey).forEach((item) => {
       const opt = document.createElement('option');
       opt.value = item[valueKey]; opt.textContent = item[labelKey];
       select.appendChild(opt);
@@ -438,6 +444,7 @@ export async function mountTaskflowApp(opts = {}) {
       if (n && !names.includes(n)) names.push(n);
     });
     selectedSet.forEach((s) => { if (!names.includes(s)) names.push(s); });
+    names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
     root.innerHTML = `
       <button type="button" class="ms-toggle" id="${root.id}-toggle" aria-expanded="false" aria-haspopup="listbox">
@@ -1870,16 +1877,16 @@ export async function mountTaskflowApp(opts = {}) {
         api('/master/task-types'),  api('/master/employees')
       ]);
       state.master = {
-        departments,
-        projects,
-        taskTypes,
-        employees: (employees || []).filter((e) => !isClientUserRow(e)),
+        departments: sortByLabel(departments),
+        projects: sortByLabel(projects),
+        taskTypes: sortByLabel(taskTypes),
+        employees: sortByLabel((employees || []).filter((e) => !isClientUserRow(e)), 'full_name'),
       };
-      fillSelect(els.fDepartment, departments, { placeholder: 'Select department' });
-      fillSelect(els.fProject, projects, { placeholder: 'Select project' });
-      fillSelect(els.fTaskType, taskTypes, { placeholder: 'Select task type' });
-      fillSelect(els.filterDepartment, departments, { placeholder: 'All departments' });
-      fillSitePeopleDropdowns(employees);
+      fillSelect(els.fDepartment, state.master.departments, { placeholder: 'Select department' });
+      fillSelect(els.fProject, state.master.projects, { placeholder: 'Select project' });
+      fillSelect(els.fTaskType, state.master.taskTypes, { placeholder: 'Select task type' });
+      fillSelect(els.filterDepartment, state.master.departments, { placeholder: 'All departments' });
+      fillSitePeopleDropdowns(state.master.employees);
       syncTaskEmployeeDropdown();
       syncFilterEmployeeDropdown();
       syncOverdueEmployeeDropdown();
@@ -1903,7 +1910,10 @@ export async function mountTaskflowApp(opts = {}) {
   
   async function refreshEmployeeDropdowns() {
     try {
-      const employees = (await api('/master/employees')).filter((e) => !isClientUserRow(e));
+      const employees = sortByLabel(
+        (await api('/master/employees')).filter((e) => !isClientUserRow(e)),
+        'full_name'
+      );
       state.master.employees = employees;
       syncTaskEmployeeDropdown();
       syncFilterEmployeeDropdown();
@@ -5800,7 +5810,7 @@ export async function mountTaskflowApp(opts = {}) {
       const taskLines = (item.tasks || [])
         .map((t) => `<li>${escapeHtml((t.description || 'Task').slice(0, 120))} · ${escapeHtml(String(t.target_date || '').slice(0, 10))}</li>`)
         .join('');
-      const assigneeOpts = (item.assignees || [])
+      const assigneeOpts = sortByLabel(item.assignees || [], 'full_name')
         .map((u) => `<option value="${u.id}">${escapeHtml(u.full_name)}</option>`)
         .join('');
       block.innerHTML = `
@@ -5923,7 +5933,7 @@ export async function mountTaskflowApp(opts = {}) {
     try {
       const all = await api('/employees');
       // Clients belong only in Manage clients — never here
-      employeesCache = (all || []).filter((e) => !isClientUserRow(e));
+      employeesCache = sortByLabel((all || []).filter((e) => !isClientUserRow(e)), 'full_name');
       fillEmpDepartmentFilter(employeesCache);
       applyEmployeesFilter();
     } catch (err) { showToast(err.message, 'error'); }
@@ -5934,7 +5944,7 @@ export async function mountTaskflowApp(opts = {}) {
     if (!sel) return;
     const prev = sel.value;
     const depts = [...new Set((employees || []).map((e) => e.department).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     sel.innerHTML = '<option value="">All departments</option>';
     depts.forEach((d) => {
       const opt = document.createElement('option');
@@ -6937,7 +6947,10 @@ export async function mountTaskflowApp(opts = {}) {
     els.permissionsTableBody.innerHTML = `<tr><td colspan="10" class="empty-state">Loading employees…</td></tr>`;
     try {
       const employees = (await api('/employees'))
-        .filter((e) => !isClientUserRow(e) && e.is_active !== false);
+        .filter((e) => !isClientUserRow(e) && e.is_active !== false)
+        .sort((a, b) =>
+          String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+        );
       renderPermissionsTable(employees);
     } catch (err) { showToast(err.message, 'error'); }
   }
@@ -6947,7 +6960,10 @@ export async function mountTaskflowApp(opts = {}) {
       return;
     }
     els.permissionsTableBody.innerHTML = '';
-    employees.forEach((emp) => {
+    const sorted = [...employees].sort((a, b) =>
+      String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+    );
+    sorted.forEach((emp) => {
       const tr = document.createElement('tr');
       const isAdminRow = emp.role === 'admin';
       tr.innerHTML = `
@@ -7015,7 +7031,9 @@ export async function mountTaskflowApp(opts = {}) {
       const data = await api('/master/nav-visibility');
       state.navVis = data.map || {};
       const roles = data.roles || ['admin', 'mis', 'employee', 'site', 'site_head'];
-      const modules = data.modules || [];
+      const modules = [...(data.modules || [])].sort((a, b) =>
+        String(a.label || a.key || '').localeCompare(String(b.label || b.key || ''), undefined, { sensitivity: 'base' })
+      );
       body.innerHTML = '';
       modules.forEach((mod) => {
         const tr = document.createElement('tr');
@@ -7123,12 +7141,13 @@ export async function mountTaskflowApp(opts = {}) {
     } catch (err) { showToast(err.message, 'error'); }
   }
   function renderSimpleNameTable(tbody, items) {
-    if (!items.length) {
+    const sorted = sortByLabel(items);
+    if (!sorted.length) {
       tbody.innerHTML = `<tr><td class="empty-state">None yet — add one above</td></tr>`;
       return;
     }
     tbody.innerHTML = '';
-    items.forEach((item) => {
+    sorted.forEach((item) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `<td>${escapeHtml(item.name)}</td>`;
       tbody.appendChild(tr);
@@ -7154,7 +7173,7 @@ export async function mountTaskflowApp(opts = {}) {
   });
   
   // ─── Manage Sites ─────────────────────────────────────────────────────────────
-  const DEFAULT_SITE_PROJECT_TYPES = ['Residential', 'Commercial', 'Industrial', 'Institutional'];
+  const DEFAULT_SITE_PROJECT_TYPES = ['Commercial', 'Industrial', 'Institutional', 'Residential'];
   let siteProjectTypeOptions = [...DEFAULT_SITE_PROJECT_TYPES];
 
   function mergeSiteProjectTypesFromSites(sites) {
@@ -7564,7 +7583,7 @@ export async function mountTaskflowApp(opts = {}) {
     if (!sel) return;
     const prev = sel.value;
     const sites = [...new Set((clients || []).map((c) => c.site_name).filter(Boolean))]
-      .sort((a, b) => a.localeCompare(b));
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
     sel.innerHTML = '<option value="">All projects</option>';
     sites.forEach((s) => {
       const opt = document.createElement('option');
@@ -7579,7 +7598,8 @@ export async function mountTaskflowApp(opts = {}) {
     const q = (els.clientFilterQ?.value || '').trim().toLowerCase();
     const site = els.clientFilterSite?.value || '';
     const status = els.clientFilterStatus?.value || '';
-    return clientsCache.filter((c) => {
+    return clientsCache
+      .filter((c) => {
       if (site && String(c.site_name || '') !== site) return false;
       if (status === 'active' && c.is_active === false) return false;
       if (status === 'inactive' && c.is_active !== false) return false;
@@ -7592,7 +7612,10 @@ export async function mountTaskflowApp(opts = {}) {
         if (!hay.includes(q)) return false;
       }
       return true;
-    });
+    })
+      .sort((a, b) =>
+        String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })
+      );
   }
 
   function applyClientsFilter() {
@@ -8571,7 +8594,7 @@ export async function mountTaskflowApp(opts = {}) {
   // ─── DRAWINGS MODULE ───────────────────────────────────────────────
   // ═══════════════════════════════════════════════════════════════════
   
-  const DRAWING_CATEGORIES = ['Layout','Presentation','Architectural','Structural','MEP','Others'];
+  const DRAWING_CATEGORIES = ['Architectural', 'Layout', 'MEP', 'Others', 'Presentation', 'Structural'];
   
   // ─── Add Drawing View ────────────────────────────────────────────────
   function renderDrawingAddView() {
@@ -8581,27 +8604,13 @@ export async function mountTaskflowApp(opts = {}) {
     // Load projects for dropdown
     api('/master/projects').then(projects => {
       const projSel = view.querySelector('#drw-project');
-      if (projSel) {
-        projSel.innerHTML = '<option value="">-- Select Project --</option>';
-        (projects || []).forEach(p => {
-          const opt = document.createElement('option');
-          opt.value = p.id; opt.textContent = p.name;
-          projSel.appendChild(opt);
-        });
-      }
+      if (projSel) fillSelect(projSel, projects || [], { placeholder: '-- Select Project --' });
     }).catch(() => {});
   
     // Load verifiers/heads for dropdown
     api('/master/verifiers').then(users => {
       const headSel = view.querySelector('#drw-head');
-      if (headSel) {
-        headSel.innerHTML = '<option value="">-- Select Head --</option>';
-        (users || []).forEach(u => {
-          const opt = document.createElement('option');
-          opt.value = u.id; opt.textContent = u.full_name;
-          headSel.appendChild(opt);
-        });
-      }
+      if (headSel) fillSelect(headSel, users || [], { placeholder: '-- Select Head --', labelKey: 'full_name' });
     }).catch(() => {});
   
     // Category change → update subcategory
@@ -9785,12 +9794,14 @@ export async function mountTaskflowApp(opts = {}) {
     const personId = personSel?.value || '';
     const dept = deptSel?.value || '';
     if (personSel) {
+      const sortedEmps = sortByLabel(emps, 'name');
       personSel.innerHTML = ['<option value="">All employees</option>']
-        .concat(emps.map((e) => `<option value="${escapeHtml(String(e.id))}">${escapeHtml(e.name)}</option>`)).join('');
+        .concat(sortedEmps.map((e) => `<option value="${escapeHtml(String(e.id))}">${escapeHtml(e.name)}</option>`)).join('');
       personSel.value = personId;
     }
     if (deptSel && !deptSel.dataset.filled) {
-      const depts = [...new Set(emps.map((e) => e.department || e.portfolio?.department).filter(Boolean))].sort();
+      const depts = [...new Set(emps.map((e) => e.department || e.portfolio?.department).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
       deptSel.innerHTML = ['<option value="">All departments</option>']
         .concat(depts.map((d) => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`)).join('');
       deptSel.dataset.filled = '1';
@@ -10189,13 +10200,13 @@ export async function mountTaskflowApp(opts = {}) {
     const perSel = document.getElementById('fmsPerson');
     const uniq = (list) => [...new Map(list.filter((x) => x.id).map((x) => [String(x.id), x])).values()];
     if (projSel && !projSel.dataset.filled) {
-      const projects = uniq(rows.map((r) => ({ id: r.project_id, name: r.project })));
+      const projects = sortByLabel(uniq(rows.map((r) => ({ id: r.project_id, name: r.project }))));
       projSel.innerHTML = ['<option value="">All projects</option>']
         .concat(projects.map((p) => `<option value="${escapeHtml(String(p.id))}">${escapeHtml(p.name)}</option>`)).join('');
       projSel.dataset.filled = '1';
     }
     if (perSel && !perSel.dataset.filled) {
-      const people = uniq(rows.map((r) => ({ id: r.person_id, name: r.person })));
+      const people = sortByLabel(uniq(rows.map((r) => ({ id: r.person_id, name: r.person }))));
       perSel.innerHTML = ['<option value="">All people</option>']
         .concat(people.map((p) => `<option value="${escapeHtml(String(p.id))}">${escapeHtml(p.name)}</option>`)).join('');
       perSel.dataset.filled = '1';
@@ -11263,16 +11274,10 @@ export async function mountTaskflowApp(opts = {}) {
       if (data.hint) showToast(data.hint, 'error');
       const projects = data.projects || [];
       const members = data.members || [];
-      const fill = (sel, items, ph) => {
+      const fill = (sel, items, ph, labelKey = 'name') => {
         const el = document.getElementById(sel);
         if (!el) return;
-        el.innerHTML = `<option value="">${ph}</option>`;
-        items.forEach((p) => {
-          const opt = document.createElement('option');
-          opt.value = p.id;
-          opt.textContent = p.name || p.full_name;
-          el.appendChild(opt);
-        });
+        fillSelect(el, items, { placeholder: ph, labelKey });
       };
       fill('pmg-project', projects, 'Select project');
       fill('pmg-from', projects, 'From project');
@@ -11280,8 +11285,8 @@ export async function mountTaskflowApp(opts = {}) {
       const emps = state.master.employees?.length
         ? state.master.employees
         : await api('/master/employees').catch(() => []);
-      fill('pmg-employee', emps, 'Select employee');
-      fill('pmg-shift-emp', emps, 'Select employee');
+      fill('pmg-employee', emps, 'Select employee', 'full_name');
+      fill('pmg-shift-emp', emps, 'Select employee', 'full_name');
 
       const box = document.getElementById('pmgMembers');
       if (box) {

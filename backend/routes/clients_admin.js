@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
     const { data, error } = await supabase
       .from('users')
       .select('id, username, full_name, department, designation, role, is_active, site_name, site_names, created_at')
-      .order('created_at', { ascending: false });
+      .order('full_name', { ascending: true });
     if (error) throw error;
     const clients = (data || []).filter(isClientRow);
     const detailsBySite = await loadSiteDetailsForSites(clients.map((c) => c.site_name));

@@ -96,12 +96,12 @@ router.get('/', async (req, res) => {
     let { data, error } = await supabase
       .from('users')
       .select('id, username, full_name, department, designation, role, is_active, can_verify, is_mis_executive, can_add_site, can_add_employee, can_add_task, can_resolve_tickets, can_switch_office_site, can_switch_office_mdo, created_at, reporting_head_id, is_head, site_name, site_names, whatsapp_number')
-      .order('created_at', { ascending: true });
+      .order('full_name', { ascending: true });
     if (error && /can_switch_office_mdo|can_add_task/i.test(error.message || '')) {
       ({ data, error } = await supabase
         .from('users')
         .select('id, username, full_name, department, designation, role, is_active, can_verify, is_mis_executive, can_add_site, can_add_employee, can_resolve_tickets, can_switch_office_site, created_at, reporting_head_id, is_head, site_name, site_names, whatsapp_number')
-        .order('created_at', { ascending: true }));
+        .order('full_name', { ascending: true }));
     }
     if (error) throw error;
     res.json(await attachReportingHead(data));

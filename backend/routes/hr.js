@@ -38,34 +38,34 @@ const publicDocsUpload = upload.fields([
 
 /** HR-only master lists (not TaskFlow users) */
 const HR_DEPARTMENTS = [
+  'Accounts',
+  'Admin',
   'Engg. Division',
+  'General',
+  'HR',
   'MDO OFFICE',
   'PMC',
   'Sales',
-  'Accounts',
-  'HR',
-  'Admin',
-  'General',
 ];
 
 const HR_DESIGNATIONS = [
-  'Site Engineer',
-  'Site Incharge',
-  'Site Head',
-  'SITE HEAD',
-  'Team lead',
   'Coordinator',
-  'Site Co-ordinater',
-  'Office Head',
+  'EA',
   'Estimator',
-  'Sr Estimator',
   'JR.ESTIMATOR',
   'Jr. Estimator',
   'MIS',
-  'EA',
-  'Sales Executive',
+  'Office Head',
   'Process Controller',
+  'SITE HEAD',
+  'Sales Executive',
+  'Site Co-ordinater',
+  'Site Engineer',
+  'Site Head',
+  'Site Incharge',
+  'Sr Estimator',
   'Staff',
+  'Team lead',
 ];
 
 const RECRUIT_STATUSES = [

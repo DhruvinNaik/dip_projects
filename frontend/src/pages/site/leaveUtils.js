@@ -349,6 +349,7 @@ export async function fetchManagedSites(supabase, user) {
     if (sameId(p.site_incharge_id, uid) || sameId(p.team_leader_id, uid)) headSites.add(key);
     if (sameId(p.coordinator_id, uid)) coordSites.add(key);
   });
+  siteNames.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   return { siteNames, headSites, coordSites };
 }
 

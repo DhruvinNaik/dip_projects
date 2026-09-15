@@ -13,14 +13,14 @@ export default function EmployeeOnboardPage() {
   const [error, setError] = useState('');
   const [files, setFiles] = useState({});
   const [departments, setDepartments] = useState([
+    'Accounts',
+    'Admin',
     'Engg. Division',
+    'General',
+    'HR',
     'MDO OFFICE',
     'PMC',
     'Sales',
-    'Accounts',
-    'HR',
-    'Admin',
-    'General',
   ]);
   const [form, setForm] = useState({
     employee_name: '',
@@ -66,7 +66,11 @@ export default function EmployeeOnboardPage() {
           setAlready(true);
         } else {
           if (Array.isArray(data.departments) && data.departments.length) {
-            setDepartments(data.departments);
+            setDepartments(
+              [...data.departments].sort((a, b) =>
+                String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
+              )
+            );
           }
           setForm((f) => ({
             ...f,

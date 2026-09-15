@@ -1693,7 +1693,8 @@ async function dbFetch(table, col = "name") {
   return (data || [])
     .map((r) => r[col])
     .filter(Boolean)
-    .map(titleCase);
+    .map(titleCase)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 }
 async function dbInsert(table, payload) {
   const { error } = await supabase.from(table).insert(payload);
@@ -1754,7 +1755,7 @@ async function getManpowerTypesForScope(rawScope) {
         .filter(Boolean)
         .map(titleCase),
     ),
-  ];
+  ].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 }
 
 // REPLACE getManpowerTypesByCategory
@@ -1768,7 +1769,8 @@ async function getManpowerTypesByCategory(category) {
   return (data || [])
     .map((r) => r.manpowertype)
     .filter(Boolean)
-    .map(titleCase);
+    .map(titleCase)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 }
 
 // REPLACE getAllCategories
@@ -1780,7 +1782,8 @@ async function getAllCategories() {
   return (data || [])
     .map((r) => r.category)
     .filter(Boolean)
-    .map(titleCase);
+    .map(titleCase)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 }
 
 // REPLACE getEngineersForSite
@@ -1795,7 +1798,7 @@ async function getEngineersForSite(site) {
       return data
         .map((r) => titleCase(r.full_name || r.user_name || ""))
         .filter(Boolean)
-        .sort();
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
     }
   } catch {
     /* table optional */
@@ -1983,6 +1986,9 @@ function AddPopup({
 
 function SelectWithAdd({ value, onChange, options, placeholder, onAdd }) {
   const [showPopup, setShowPopup] = useState(false);
+  const sortedOptions = [...(options || [])].sort((a, b) =>
+    String(a).localeCompare(String(b), undefined, { sensitivity: "base" })
+  );
   return (
     <>
       <select
@@ -1994,7 +2000,7 @@ function SelectWithAdd({ value, onChange, options, placeholder, onAdd }) {
         }}
       >
         <option value="">{placeholder}</option>
-        {options.map((o) => (
+        {sortedOptions.map((o) => (
           <option key={o} value={o}>
             {o}
           </option>
@@ -2828,7 +2834,9 @@ function EquipmentSection({ list, setList }) {
   // Equipment names for selected source
   const srcOpts =
     source && master[source]
-      ? [...new Set(master[source].map((e) => e.name))]
+      ? [...new Set(master[source].map((e) => e.name))].sort((a, b) =>
+          String(a).localeCompare(String(b), undefined, { sensitivity: "base" })
+        )
       : [];
 
   // When equipment name changes, auto-fill unit from master
@@ -4139,7 +4147,11 @@ function DprForm({ user }) {
         setSite(sites[0]);
       }
 
-      setUserSites(sites);
+      setUserSites(
+        [...sites].sort((a, b) =>
+          String(a).localeCompare(String(b), undefined, { sensitivity: "base" })
+        )
+      );
       setLoadingSites(false);
     })();
   }, [user]);

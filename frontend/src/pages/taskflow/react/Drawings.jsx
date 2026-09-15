@@ -32,8 +32,8 @@ export default function Drawings() {
         api('/master/verifiers'),
       ]);
       setRows(Array.isArray(drawings) ? drawings : []);
-      setProjects(Array.isArray(projs) ? projs : []);
-      setVerifiers(Array.isArray(heads) ? heads : []);
+      setProjects(Array.isArray(projs) ? [...projs].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })) : []);
+      setVerifiers(Array.isArray(heads) ? [...heads].sort((a, b) => String(a.full_name || '').localeCompare(String(b.full_name || ''), undefined, { sensitivity: 'base' })) : []);
     } catch (e) {
       setError(e.message || 'Failed to load drawings (admin)');
     } finally {

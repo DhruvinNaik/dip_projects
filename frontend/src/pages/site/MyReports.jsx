@@ -395,7 +395,8 @@ useEffect(() => {
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const siteKey = (r) => r._source === "svr" ? r.site_name : r._source === "wpr" ? r.site_name : r.site;
-  const siteOptions = [...new Set(data.map(siteKey).filter(Boolean))].sort();
+  const siteOptions = [...new Set(data.map(siteKey).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
   const filtered    = siteFilter ? data.filter(r => siteKey(r) === siteFilter) : data;
 
   const grouped = {};

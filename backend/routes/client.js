@@ -65,7 +65,7 @@ function uniqueSiteNames(names) {
     seen.add(key);
     sites.push(s);
   }
-  return sites;
+  return sites.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
 function normalizeSiteKey(s) {

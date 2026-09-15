@@ -19,8 +19,8 @@ export default function MasterData() {
         api('/master/departments'),
         api('/master/task-types'),
       ]);
-      setDepartments(Array.isArray(d) ? d : []);
-      setTaskTypes(Array.isArray(t) ? t : []);
+      setDepartments(Array.isArray(d) ? [...d].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })) : []);
+      setTaskTypes(Array.isArray(t) ? [...t].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' })) : []);
     } catch (e) {
       setError(e.message || 'Failed to load master data');
     } finally {

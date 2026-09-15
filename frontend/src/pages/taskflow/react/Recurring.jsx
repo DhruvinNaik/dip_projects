@@ -51,11 +51,15 @@ export default function Recurring() {
           api('/master/task-types'),
           api('/master/employees'),
         ]);
+        const byLabel = (arr, key = 'name') =>
+          [...(arr || [])].sort((a, b) =>
+            String(a?.[key] || '').localeCompare(String(b?.[key] || ''), undefined, { sensitivity: 'base' })
+          );
         setMeta({
-          depts: depts || [],
-          projects: projects || [],
-          types: types || [],
-          people: people || [],
+          depts: byLabel(depts),
+          projects: byLabel(projects),
+          types: byLabel(types),
+          people: byLabel(people, 'full_name'),
         });
       } catch {
         /* optional for list tabs */
