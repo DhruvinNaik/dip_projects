@@ -3634,6 +3634,8 @@ useEffect(() => {
             style={{
               display: "flex",
               flexDirection: "column",
+              flex: "1 1 auto",
+              minHeight: 0,
               overflow: "visible",
             }}
           >
@@ -3646,7 +3648,13 @@ useEffect(() => {
                 className={`sni${activeTab === n.key ? " act" : ""}`}
                 onClick={() => {
                   setActiveTab(n.key);
-                  if (window.innerWidth <= 768) setSidebarOpen(false);
+                  if (window.innerWidth <= 999) setSidebarOpen(false);
+                  requestAnimationFrame(() => {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                    document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+                    document.body.scrollTo({ top: 0, behavior: "smooth" });
+                    document.querySelector(".main")?.scrollTo({ top: 0, behavior: "smooth" });
+                  });
                 }}
                 onMouseEnter={() => setHoveredNavKey(n.key)}
                 onMouseLeave={() => setHoveredNavKey(null)}
@@ -3683,9 +3691,16 @@ useEffect(() => {
               height: "auto",
               minHeight: 40,
               flexShrink: 0,
-              marginTop: 4,
-              background: hoveredNavKey === "theme" ? "rgba(217, 119, 6, 0.12)" : undefined,
+              marginTop: "auto",
+              position: "sticky",
+              bottom: 0,
+              background:
+                hoveredNavKey === "theme"
+                  ? "rgba(217, 119, 6, 0.12)"
+                  : "var(--surface)",
               color: hoveredNavKey === "theme" ? "#d97706" : undefined,
+              borderTop: "1px solid var(--line)",
+              zIndex: 2,
             }}
             title={isDark ? "Switch to light mode" : "Switch to dark mode"}
           >

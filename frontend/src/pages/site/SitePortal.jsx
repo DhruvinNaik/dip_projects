@@ -2544,19 +2544,23 @@ useEffect(() => {
     if (isOfficeSiteViewer(viewer) && !OFFICE_SITE_TABS.has(key)) {
       setActiveTab("report-submissions");
       if (window.innerWidth <= 999) setSidebarOpen(false);
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (mainRef.current) mainRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      });
       return;
     }
     setActiveTab(key);
     if (key === "my-leave") markLeavesSeen(user);
     if (window.innerWidth <= 999) setSidebarOpen(false);
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       window.scrollTo({ top: 0, behavior: "smooth" });
       document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
       document.body.scrollTo({ top: 0, behavior: "smooth" });
       if (mainRef.current)
         mainRef.current.scrollTo({ top: 0, behavior: "smooth" });
-    }, 0);
+    });
   };
 
   useEffect(() => {

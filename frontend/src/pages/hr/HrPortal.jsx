@@ -2628,6 +2628,14 @@ export default function HrPortal({ user, onLogout, onOpenOffice }) {
   const goTab = (key) => {
     setTab(key);
     if (isMobile) setSidebarOpen(false);
+    // Always bring the opened section into view (all screen sizes)
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+      document.body.scrollTo({ top: 0, behavior: 'smooth' });
+      document.querySelector('.hr-main')?.scrollTo({ top: 0, behavior: 'smooth' });
+      document.querySelector('.hr-page-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const toggleTheme = () => {

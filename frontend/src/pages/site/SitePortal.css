@@ -769,7 +769,7 @@ color:#f0ede8 !important;
 /* ── Mobile ── */
 .sb-backdrop{display:none;}
 @media(max-width:768px){
-  .site-sidebar{position:relative;top:58px;left:0;z-index:200;height:calc(100vh - 58px);width:min(85vw,270px);min-width:0;transform:translateX(0);box-shadow:12px 0 32px rgba(0,0,0,.18);}
+  .site-sidebar{position:relative;top:58px;left:0;z-index:200;height:calc(100dvh - 58px);max-height:calc(100dvh - 58px);width:min(85vw,270px);min-width:0;transform:translateX(0);box-shadow:12px 0 32px rgba(0,0,0,.18);overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .site-sidebar.closed{width:min(85vw,270px);min-width:0;transform:translateX(-110%);opacity:0;}
 
   .sb-backdrop{display:block;position:fixed;inset:0;top:58px;z-index:190;background:rgba(15,13,10,.4);border:none;padding:0;}

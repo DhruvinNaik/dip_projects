@@ -183,7 +183,6 @@ html:has(.hr-shell) body {
   gap: 6px;
   flex-shrink: 0;
   background: var(--surface);
-  margin-bottom: 10px;  
 }
 
 .hr-theme-toggle {
@@ -1098,10 +1097,31 @@ html:has(.hr-shell) body {
     bottom: 0;
     z-index: 40;
     box-shadow: var(--shadow);
+    height: calc(100dvh - 58px);
+    max-height: calc(100dvh - 58px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .hr-sidebar.closed {
     transform: translateX(-100%);
+  }
+
+  .hr-snav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: visible; /* whole sidebar scrolls on mobile so theme toggle is reachable */
+  }
+
+  .hr-side-foot {
+    margin-bottom: 0;
+    padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    box-shadow: 0 -6px 12px rgba(15, 13, 10, 0.06);
   }
 
   .hr-sb-backdrop {
