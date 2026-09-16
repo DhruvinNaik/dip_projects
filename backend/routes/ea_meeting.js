@@ -10,6 +10,10 @@ const {
   userCanViewAllEaUploads,
   findBeenaOrPcUsers,
 } = require('../lib/taskListDigest');
+const {
+  notifyWeeklyPlanAfterUpload,
+  istYmd: weeklyPlanIstYmd,
+} = require('../lib/weeklyPlanDayList');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -306,6 +310,10 @@ async function notifyUploaderWhatsApp(user, opts = {}) {
   }
 
   if (opts.kind === 'uploaded') {
+    // Day-list WhatsApp (tasks + sr nos) is sent separately after ingest.
+    if (opts.skipUploaderText) {
+      return { ok: true, kind: 'uploaded', who: fullName, skipped: 'day_list_follows' };
+    }
     await sendWhatsAppText(
       wa,
       `✅ EM weekly plan uploaded.\nWeek: ${opts.weekStart || '—'}\nSite → My Tasks.\nBeena + your site can see the files.`
@@ -360,6 +368,107 @@ async function notifyUserEaAndTasks(user, opts = {}) {
   return { ...uploader, beenaNotify: beena };
 }
 
+/**
+ * Save browser-parsed plan cells into weekly_plan_tasks (deduped).
+ * Shared by POST /:id/ingest and upload notify.
+ */
+async function ingestParsedBatches(ea, batches) {
+  const rows = [];
+  for (const batch of batches || []) {
+    const sourceFile = normalizeSourceFile(batch?.source_file);
+    const tasks = Array.isArray(batch?.tasks) ? batch.tasks : [];
+    for (const t of tasks.slice(0, 400)) {
+      const row = mapIngestTask(t, ea, sourceFile);
+      if (row) rows.push(row);
+    }
+  }
+
+  if (!rows.length) {
+    return { ok: true, inserted: 0, note: 'No tasks to save' };
+  }
+
+  const sourceFiles = [...new Set(rows.map((r) => r.source_file))];
+  let existingQ = supabase
+    .from('weekly_plan_tasks')
+    .select('id, task_date, source_file, sr_no, task_name, half, time_slot, status')
+    .eq('ea_attendance_id', ea.id);
+  if (sourceFiles.length === 1) existingQ = existingQ.eq('source_file', sourceFiles[0]);
+  const { data: existing, error: existingErr } = await existingQ;
+
+  if (existingErr) {
+    if (/relation .* does not exist|schema cache|PGRST205|42P01/i.test(existingErr.message || '')) {
+      return {
+        ok: false,
+        inserted: 0,
+        note: 'Missing table weekly_plan_tasks. Run backend/sql/weekly_plan_tasks.sql in Supabase.',
+        error: existingErr.message,
+      };
+    }
+    if (/column .*half.* does not exist/i.test(existingErr.message || '')) {
+      return {
+        ok: false,
+        inserted: 0,
+        note: 'Column half is missing. Run backend/sql/weekly_plan_tasks_half_fix.sql in Supabase.',
+        error: existingErr.message,
+      };
+    }
+    throw existingErr;
+  }
+
+  const dedupeKey = (r) =>
+    [
+      String(r.task_date || '').slice(0, 10),
+      String(r.source_file || ''),
+      r.sr_no == null ? '' : String(r.sr_no),
+      String(r.task_name || '').trim().toLowerCase(),
+      String(r.half ?? 0),
+      String(r.time_slot || '').trim().toLowerCase(),
+    ].join('|');
+
+  const have = new Set((existing || []).map(dedupeKey));
+  const toInsert = rows.filter((r) => !have.has(dedupeKey(r)));
+
+  if (!toInsert.length) {
+    return { ok: true, inserted: 0, note: 'All tasks already saved' };
+  }
+
+  let inserted = 0;
+  const chunkSize = 80;
+  for (let i = 0; i < toInsert.length; i += chunkSize) {
+    const chunk = toInsert.slice(i, i + chunkSize);
+    const { data, error } = await supabase.from('weekly_plan_tasks').insert(chunk).select('id');
+    if (error) {
+      if (/relation .* does not exist|schema cache|PGRST205|42P01/i.test(error.message || '')) {
+        return {
+          ok: false,
+          inserted,
+          note: 'Missing table weekly_plan_tasks. Run backend/sql/weekly_plan_tasks.sql in Supabase.',
+          error: error.message,
+        };
+      }
+      if (/column .*half.* does not exist/i.test(error.message || '')) {
+        return {
+          ok: false,
+          inserted,
+          note: 'Column half is missing. Run backend/sql/weekly_plan_tasks_half_fix.sql in Supabase.',
+          error: error.message,
+        };
+      }
+      for (const row of chunk) {
+        const { error: oneErr } = await supabase.from('weekly_plan_tasks').insert(row);
+        if (!oneErr) inserted += 1;
+        else if (!/duplicate|unique|23505/i.test(oneErr.message || '')) {
+          return { ok: false, inserted, error: oneErr.message || 'Ingest failed' };
+        }
+      }
+      continue;
+    }
+    inserted += Array.isArray(data) ? data.length : chunk.length;
+  }
+
+  return { ok: true, inserted };
+}
+
 router.post('/notify', async (req, res) => {
   try {
     const kind = req.body?.kind || 'present';
@@ -367,8 +476,54 @@ router.post('/notify', async (req, res) => {
       kind,
       weekStart: req.body?.weekStart,
       fileName: req.body?.fileName,
+      skipUploaderText: kind === 'uploaded',
     });
-    res.json(result);
+
+    let weeklyPlan = null;
+    if (kind === 'uploaded') {
+      const eaId = String(req.body?.eaId || '').trim();
+      const clientParsed = Array.isArray(req.body?.clientParsed) ? req.body.clientParsed : [];
+      try {
+        let ingest = { ok: true, inserted: 0, note: 'No eaId' };
+        let ea = null;
+        if (eaId) {
+          ea = await loadEaAttendanceById(eaId);
+          if (ea) {
+            ingest = await ingestParsedBatches(ea, clientParsed);
+          } else {
+            ingest = { ok: false, inserted: 0, note: 'EM attendance not found' };
+          }
+        }
+
+        const username =
+          (ea && String(ea.employee_username || '').trim()) ||
+          String(req.user?.username || '').trim();
+        const profile = await loadUserProfile(req.user);
+        const whatsapp = await notifyWeeklyPlanAfterUpload({
+          username,
+          user: profile,
+          toNumber: profile?.whatsapp_number,
+          fullName: profile?.full_name || username,
+          dayYmd: weeklyPlanIstYmd(),
+        });
+
+        weeklyPlan = {
+          ingest,
+          inserted: ingest?.inserted || 0,
+          openCount: whatsapp?.openCount ?? 0,
+          todayCount: whatsapp?.todayCount ?? 0,
+          priorPendingCount: whatsapp?.priorPendingCount ?? 0,
+          dayYmd: whatsapp?.dayYmd || weeklyPlanIstYmd(),
+          whatsapp,
+          note: whatsapp?.note || ingest?.note || null,
+        };
+      } catch (wpErr) {
+        console.error('EM weekly plan WA:', wpErr.message);
+        weeklyPlan = { ok: false, error: wpErr.message, whatsapp: { ok: false, reason: 'exception' } };
+      }
+    }
+
+    res.json({ ...result, weeklyPlan });
   } catch (err) {
     console.error('EM notify:', err.message);
     res.status(500).json({ error: err.message || 'Notify failed' });
@@ -915,114 +1070,19 @@ router.post('/:id/ingest', async (req, res) => {
     }
 
     const batches = Array.isArray(req.body?.clientParsed) ? req.body.clientParsed : [];
-    const rows = [];
-    for (const batch of batches) {
-      const sourceFile = normalizeSourceFile(batch?.source_file);
-      const tasks = Array.isArray(batch?.tasks) ? batch.tasks : [];
-      for (const t of tasks.slice(0, 400)) {
-        const row = mapIngestTask(t, ea, sourceFile);
-        if (row) rows.push(row);
-      }
+    const result = await ingestParsedBatches(ea, batches);
+    if (result.ok === false && /Missing table|Column half/i.test(result.note || '')) {
+      return res.status(503).json(result);
     }
-
-    if (!rows.length) {
-      return res.json({ ok: true, inserted: 0, note: 'No tasks to save' });
+    if (result.ok === false && result.error) {
+      return res.status(500).json(result);
     }
-
-    // Load existing rows first so re-open / Refresh does not fight unique indexes
-    // (NULL sr_no / time_slot make ON CONFLICT unreliable in Postgres).
-    const sourceFiles = [...new Set(rows.map((r) => r.source_file))];
-    let existingQ = supabase
-      .from('weekly_plan_tasks')
-      .select('id, task_date, source_file, sr_no, task_name, half, time_slot, status')
-      .eq('ea_attendance_id', eaId);
-    if (sourceFiles.length === 1) existingQ = existingQ.eq('source_file', sourceFiles[0]);
-    const { data: existing, error: existingErr } = await existingQ;
-
-    if (existingErr) {
-      console.error('EM ingest existing:', existingErr.message);
-      if (/relation .* does not exist|schema cache|PGRST205|42P01/i.test(existingErr.message || '')) {
-        return res.status(503).json({
-          ok: false,
-          inserted: 0,
-          note: 'Missing table weekly_plan_tasks. Run backend/sql/weekly_plan_tasks.sql (and weekly_plan_tasks_half_fix.sql if needed) in Supabase SQL editor, then retry.',
-          error: existingErr.message,
-        });
-      }
-      if (/column .*half.* does not exist/i.test(existingErr.message || '')) {
-        return res.status(503).json({
-          ok: false,
-          inserted: 0,
-          note: 'Column half is missing. Run backend/sql/weekly_plan_tasks_half_fix.sql in Supabase SQL editor, then retry.',
-          error: existingErr.message,
-        });
-      }
-      throw existingErr;
-    }
-
-    const dedupeKey = (r) =>
-      [
-        String(r.task_date || '').slice(0, 10),
-        String(r.source_file || ''),
-        r.sr_no == null ? '' : String(r.sr_no),
-        String(r.task_name || '').trim().toLowerCase(),
-        String(r.half ?? 0),
-        String(r.time_slot || '').trim().toLowerCase(),
-      ].join('|');
-
-    const have = new Set((existing || []).map(dedupeKey));
-    const toInsert = rows.filter((r) => !have.has(dedupeKey(r)));
-
-    if (!toInsert.length) {
-      return res.json({ ok: true, inserted: 0, note: 'All tasks already saved' });
-    }
-
-    let inserted = 0;
-    const chunkSize = 80;
-    for (let i = 0; i < toInsert.length; i += chunkSize) {
-      const chunk = toInsert.slice(i, i + chunkSize);
-      const { data, error } = await supabase.from('weekly_plan_tasks').insert(chunk).select('id');
-      if (error) {
-        console.error('EM ingest insert:', error.message);
-        if (/relation .* does not exist|schema cache|PGRST205|42P01/i.test(error.message || '')) {
-          return res.status(503).json({
-            ok: false,
-            inserted,
-            note: 'Missing table weekly_plan_tasks. Run backend/sql/weekly_plan_tasks.sql in Supabase SQL editor, then retry.',
-            error: error.message,
-          });
-        }
-        if (/column .*half.* does not exist/i.test(error.message || '')) {
-          return res.status(503).json({
-            ok: false,
-            inserted,
-            note: 'Column half is missing. Run backend/sql/weekly_plan_tasks_half_fix.sql in Supabase SQL editor, then retry.',
-            error: error.message,
-          });
-        }
-        // Fall back row-by-row so one bad cell does not block the rest
-        for (const row of chunk) {
-          const { error: oneErr } = await supabase.from('weekly_plan_tasks').insert(row);
-          if (!oneErr) inserted += 1;
-          else if (!/duplicate|unique|23505/i.test(oneErr.message || '')) {
-            console.error('EM ingest row:', oneErr.message, row.task_name, row.task_date);
-            return res.status(500).json({
-              ok: false,
-              inserted,
-              error: oneErr.message || 'Ingest failed',
-            });
-          }
-        }
-        continue;
-      }
-      inserted += Array.isArray(data) ? data.length : chunk.length;
-    }
-
-    res.json({ ok: true, inserted });
+    res.json(result);
   } catch (err) {
     console.error('EM ingest:', err.message);
     res.status(500).json({ ok: false, inserted: 0, error: err.message || 'Ingest failed' });
   }
 });
+
 
 module.exports = router;
