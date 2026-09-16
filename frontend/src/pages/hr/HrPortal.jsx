@@ -1647,7 +1647,22 @@ function InsuranceView({ employees }) {
                       </select>
                     </td>
                     <td>
-                      <button type="button" className="hr-btn ghost" disabled={busy} onClick={() => remove(r.id)}>Del</button>
+                      <button
+                        type="button"
+                        className="hr-btn ghost hr-btn-icon hr-btn-icon--danger"
+                        disabled={busy}
+                        onClick={() => remove(r.id)}
+                        title="Delete"
+                        aria-label="Delete"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M3 6h18" />
+                          <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6" />
+                          <path d="M14 11v6" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -2028,51 +2043,194 @@ function PayrollView({ employees }) {
     }
   };
 
+  const money = (n) =>
+    `₹${Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+
   return (
-    <div className="hr-panel">
-      <div className="hr-form">
-        <label>Employee
-          <select value={empId} onChange={(e) => setEmpId(e.target.value)}>
-            <option value="">Select…</option>
-            {employees.filter((e) => e.is_active !== false).map((e) => (
-              <option key={e.id} value={e.id}>{e.full_name}</option>
-            ))}
-          </select>
-        </label>
-        <label>Month<input type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></label>
-        <label>Pay date<input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} /></label>
-        <label>Paid days<input value={paidDays} onChange={(e) => setPaidDays(e.target.value)} /></label>
-        <label>LOP days<input value={lopDays} onChange={(e) => setLopDays(e.target.value)} /></label>
+    <div className="hr-panel hr-payroll">
+      <div className="hr-payroll-head">
+        <div>
+          <h3 className="hr-payroll-title">
+            <span className="hr-panel-title-ico" aria-hidden>{Ico.payroll}</span>
+            Salary slip
+          </h3>
+          <p className="hr-sub">Fill employee & pay period, adjust earnings / deductions, then download PDF.</p>
+        </div>
       </div>
 
-      <h4>Earnings</h4>
-      {earnings.map((r, i) => (
-        <div className="hr-toolbar" key={`e-${i}`}>
-          <input value={r.label} onChange={(e) => updateRow(earnings, setEarnings, i, 'label', e.target.value)} />
-          <input type="number" value={r.amt} onChange={(e) => updateRow(earnings, setEarnings, i, 'amt', e.target.value)} />
-          <button type="button" className="hr-btn ghost" onClick={() => setEarnings(earnings.filter((_, j) => j !== i))}>Remove</button>
+      <section className="hr-payroll-card">
+        <div className="hr-payroll-card-label">Employee & period</div>
+        <div className="hr-payroll-meta">
+          <label className="hr-field hr-payroll-emp">
+            <span className="hr-field-label">Employee</span>
+            <select value={empId} onChange={(e) => setEmpId(e.target.value)}>
+              <option value="">Select employee…</option>
+              {employees.filter((e) => e.is_active !== false).map((e) => (
+                <option key={e.id} value={e.id}>{e.full_name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="hr-field">
+            <span className="hr-field-label">Month</span>
+            <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} />
+          </label>
+          <label className="hr-field">
+            <span className="hr-field-label">Pay date</span>
+            <input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} />
+          </label>
+          <label className="hr-field">
+            <span className="hr-field-label">Paid days</span>
+            <input inputMode="numeric" value={paidDays} onChange={(e) => setPaidDays(e.target.value)} />
+          </label>
+          <label className="hr-field">
+            <span className="hr-field-label">LOP days</span>
+            <input inputMode="numeric" value={lopDays} onChange={(e) => setLopDays(e.target.value)} />
+          </label>
         </div>
-      ))}
-      <button type="button" className="hr-btn ghost" onClick={() => setEarnings([...earnings, { label: 'Allowance', amt: 0 }])}>+ Earning</button>
+        {emp ? (
+          <div className="hr-payroll-emp-chip">
+            <strong>{emp.full_name}</strong>
+            <span>{emp.designation || '—'}</span>
+            <span>{emp.department || '—'}</span>
+          </div>
+        ) : null}
+      </section>
 
-      <h4>Deductions</h4>
-      {deductions.map((r, i) => (
-        <div className="hr-toolbar" key={`d-${i}`}>
-          <input value={r.label} onChange={(e) => updateRow(deductions, setDeductions, i, 'label', e.target.value)} />
-          <input type="number" value={r.amt} onChange={(e) => updateRow(deductions, setDeductions, i, 'amt', e.target.value)} />
-          <button type="button" className="hr-btn ghost" onClick={() => setDeductions(deductions.filter((_, j) => j !== i))}>Remove</button>
+      <div className="hr-payroll-cols">
+        <section className="hr-payroll-card hr-payroll-card--earn">
+          <div className="hr-payroll-card-head">
+            <div className="hr-payroll-card-label">Earnings</div>
+            <span className="hr-payroll-card-sum">{money(gross)}</span>
+          </div>
+          <div className="hr-payroll-rows">
+            <div className="hr-payroll-row hr-payroll-row--head">
+              <span>Component</span>
+              <span>Amount (₹)</span>
+              <span />
+            </div>
+            {earnings.map((r, i) => (
+              <div className="hr-payroll-row" key={`e-${i}`}>
+                <input
+                  className="hr-payroll-name"
+                  value={r.label}
+                  onChange={(e) => updateRow(earnings, setEarnings, i, 'label', e.target.value)}
+                  placeholder="Component"
+                />
+                <input
+                  className="hr-payroll-amt"
+                  type="number"
+                  min="0"
+                  value={r.amt}
+                  onChange={(e) => updateRow(earnings, setEarnings, i, 'amt', e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="hr-btn ghost hr-btn-icon hr-btn-icon--danger"
+                  onClick={() => setEarnings(earnings.filter((_, j) => j !== i))}
+                  title="Remove"
+                  aria-label="Remove earning"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="hr-btn ghost hr-payroll-add"
+            onClick={() => setEarnings([...earnings, { label: 'Allowance', amt: 0 }])}
+          >
+            + Add earning
+          </button>
+        </section>
+
+        <section className="hr-payroll-card hr-payroll-card--deduct">
+          <div className="hr-payroll-card-head">
+            <div className="hr-payroll-card-label">Deductions</div>
+            <span className="hr-payroll-card-sum hr-payroll-card-sum--deduct">{money(totalDeductions)}</span>
+          </div>
+          <div className="hr-payroll-rows">
+            <div className="hr-payroll-row hr-payroll-row--head">
+              <span>Component</span>
+              <span>Amount (₹)</span>
+              <span />
+            </div>
+            {deductions.map((r, i) => (
+              <div className="hr-payroll-row" key={`d-${i}`}>
+                <input
+                  className="hr-payroll-name"
+                  value={r.label}
+                  onChange={(e) => updateRow(deductions, setDeductions, i, 'label', e.target.value)}
+                  placeholder="Component"
+                />
+                <input
+                  className="hr-payroll-amt"
+                  type="number"
+                  min="0"
+                  value={r.amt}
+                  onChange={(e) => updateRow(deductions, setDeductions, i, 'amt', e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="hr-btn ghost hr-btn-icon hr-btn-icon--danger"
+                  onClick={() => setDeductions(deductions.filter((_, j) => j !== i))}
+                  title="Remove"
+                  aria-label="Remove deduction"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="hr-btn ghost hr-payroll-add"
+            onClick={() => setDeductions([...deductions, { label: 'Deduction', amt: 0 }])}
+          >
+            + Add deduction
+          </button>
+        </section>
+      </div>
+
+      <section className="hr-payroll-summary">
+        <div className="hr-payroll-stat">
+          <span className="hr-payroll-stat-label">Gross</span>
+          <strong className="hr-payroll-stat-val">{money(gross)}</strong>
         </div>
-      ))}
-      <button type="button" className="hr-btn ghost" onClick={() => setDeductions([...deductions, { label: 'Deduction', amt: 0 }])}>+ Deduction</button>
-
-      <p style={{ marginTop: 16 }}>
-        Gross: <b>₹{gross.toLocaleString('en-IN')}</b> · Deductions:{' '}
-        <b>₹{totalDeductions.toLocaleString('en-IN')}</b> · Net:{' '}
-        <b>₹{netPayable.toLocaleString('en-IN')}</b>
-      </p>
-      <button type="button" className="hr-btn" disabled={busy} onClick={download}>
-        {busy ? 'Generating…' : 'Download salary slip PDF'}
-      </button>
+        <div className="hr-payroll-stat hr-payroll-stat--deduct">
+          <span className="hr-payroll-stat-label">Deductions</span>
+          <strong className="hr-payroll-stat-val">{money(totalDeductions)}</strong>
+        </div>
+        <div className="hr-payroll-stat hr-payroll-stat--net">
+          <span className="hr-payroll-stat-label">Net payable</span>
+          <strong className="hr-payroll-stat-val">{money(netPayable)}</strong>
+        </div>
+        <button
+          type="button"
+          className="hr-btn hr-payroll-download"
+          disabled={busy || !empId}
+          onClick={download}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          {busy ? 'Generating…' : 'Download salary slip PDF'}
+        </button>
+      </section>
     </div>
   );
 }
