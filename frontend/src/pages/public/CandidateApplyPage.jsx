@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { uploadPublicHrFiles } from '../../lib/publicHrUpload';
+import logoUrl from '../../assets/dip-logo.jpg';
 import './publicForms.css';
 
 const EDU_ROWS = ['10th', '12th / Diploma', 'Graduation', 'Post Graduation', 'Other'];
@@ -116,12 +117,24 @@ export default function CandidateApplyPage() {
   return (
     <div className="pf-page">
       <form className="pf-card" onSubmit={submit}>
-        <p className="pf-brand">DIP PROJECTS</p>
-        <h1 className="pf-title">Candidate Application Form</h1>
-        <p className="pf-sub">
-          Fill this form for interview / walk-in. Required: <b>Name</b>, <b>Mobile</b>, <b>Aadhaar</b> and{' '}
-          <b>Updated CV</b>.
-        </p>
+        <header className="pf-header">
+          <div className="pf-letterhead">
+            <img src={logoUrl} alt="Dip Projects" className="pf-logo" />
+            <div className="pf-letterhead-text">
+              <p className="pf-brand">Dip Projects</p>
+              <p className="pf-brand-meta">407/A, Trinity Business Park, Adajan, Surat</p>
+              <p className="pf-brand-meta">www.dipprojects.com</p>
+            </div>
+          </div>
+          <div className="pf-hero">
+            <span className="pf-hero-kicker">Human Resources</span>
+            <h1 className="pf-title">Candidate Application Form</h1>
+            <p className="pf-sub">
+              Fill this form for interview / walk-in. Required: <b>Name</b>, <b>Mobile</b>, <b>Aadhaar</b> and{' '}
+              <b>Updated CV</b>.
+            </p>
+          </div>
+        </header>
 
         {error ? <div className="pf-error">{error}</div> : null}
 

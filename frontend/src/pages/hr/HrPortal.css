@@ -678,12 +678,25 @@ html:has(.hr-shell) body {
   background: var(--amber-bg);
 }
 
+.hr-toolbar .hr-field--grow {
+  flex: 1 1 220px;
+  min-width: 180px;
+  max-width: 420px;
+}
+
 .hr-toolbar input[type='search'],
 .hr-toolbar input[type='text'],
-.hr-toolbar input:not([type]),
-.hr-toolbar input[placeholder] {
-  min-width: 200px;
-  flex: 1 1 200px;
+.hr-toolbar input:not([type]) {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  padding: 8px 12px;
+  line-height: 1.25;
+  /* never grow vertically inside column .hr-field labels */
+  flex: none;
+  align-self: stretch;
 }
 
 /* Dropdowns */

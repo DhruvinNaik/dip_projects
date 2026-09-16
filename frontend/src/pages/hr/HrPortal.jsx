@@ -901,9 +901,15 @@ function AttendanceView() {
           <span className="hr-field-label">To</span>
           <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
-        <label className="hr-field" style={{ flex: '1 1 200px' }}>
+        <label className="hr-field hr-field--grow">
           <span className="hr-field-label">Search</span>
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name / site…" />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search name / site…"
+            autoComplete="off"
+          />
         </label>
         <button type="button" className="hr-btn ghost" onClick={load}>Refresh</button>
       </div>

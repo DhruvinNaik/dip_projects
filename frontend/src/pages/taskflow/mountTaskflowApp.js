@@ -6658,7 +6658,7 @@ export async function mountTaskflowApp(opts = {}) {
 
     return lifted;
   }
-
+  
   function buildOrgTree(employees, siteSupervisorMap = new Map()) {
     const nodes = employees.map((employee) => ({
       ...employee,

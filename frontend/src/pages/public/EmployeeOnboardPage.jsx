@@ -1,7 +1,28 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { uploadPublicHrFiles } from '../../lib/publicHrUpload';
+import logoUrl from '../../assets/dip-logo.jpg';
 import './publicForms.css';
+
+function FormHeader({ title, subtitle }) {
+  return (
+    <header className="pf-header">
+      <div className="pf-letterhead">
+        <img src={logoUrl} alt="Dip Projects" className="pf-logo" />
+        <div className="pf-letterhead-text">
+          <p className="pf-brand">Dip Projects</p>
+          <p className="pf-brand-meta">407/A, Trinity Business Park, Adajan, Surat</p>
+          <p className="pf-brand-meta">www.dipprojects.com</p>
+        </div>
+      </div>
+      <div className="pf-hero">
+        <span className="pf-hero-kicker">Human Resources</span>
+        <h1 className="pf-title">{title}</h1>
+        {subtitle ? <p className="pf-sub">{subtitle}</p> : null}
+      </div>
+    </header>
+  );
+}
 
 export default function EmployeeOnboardPage() {
   const { token: rawToken } = useParams();
@@ -133,7 +154,10 @@ export default function EmployeeOnboardPage() {
   if (loading) {
     return (
       <div className="pf-page">
-        <div className="pf-card">Loading form…</div>
+        <div className="pf-card pf-card--narrow">
+          <FormHeader title="Employee joining details" />
+          <p className="pf-loading">Loading form…</p>
+        </div>
       </div>
     );
   }
@@ -142,9 +166,10 @@ export default function EmployeeOnboardPage() {
     return (
       <div className="pf-page">
         <div className="pf-card pf-ok">
+          <img src={logoUrl} alt="" className="pf-logo pf-logo--center" />
           <h2>{already ? 'Already submitted' : 'Submitted successfully'}</h2>
           <p>
-            Thank you. Your details are with DIP Projects HR. You do not need to download or keep any PDF —
+            Thank you. Your details are with Dip Projects HR. You do not need to download or keep any PDF —
             HR will handle records internally.
           </p>
         </div>
@@ -156,6 +181,7 @@ export default function EmployeeOnboardPage() {
     return (
       <div className="pf-page">
         <div className="pf-card">
+          <FormHeader title="Employee joining details" />
           <div className="pf-error">{error}</div>
           <p className="pf-sub" style={{ marginTop: 12 }}>
             No login needed. Use the latest QR / link from HR on your phone browser.
@@ -168,16 +194,22 @@ export default function EmployeeOnboardPage() {
   return (
     <div className="pf-page">
       <form className="pf-card" onSubmit={submit}>
-        <p className="pf-brand">DIP PROJECTS</p>
-        <h1 className="pf-title">Employee joining details</h1>
-        <p className="pf-sub">
-          Appointed employee form. Only <b>Name</b>, <b>Mobile</b> and <b>Aadhaar</b> are mandatory. Upload PDF
-          or images for documents. No PDF is sent to you — HR keeps records.
-        </p>
+        <FormHeader
+          title="Employee joining details"
+          subtitle={
+            <>
+              Appointed employee form. Only <b>Name</b>, <b>Mobile</b> and <b>Aadhaar</b> are mandatory.
+              Upload PDF or images for documents. No PDF is sent to you — HR keeps records.
+            </>
+          }
+        />
 
         {error ? <div className="pf-error">{error}</div> : null}
 
-        <div className="pf-section">Employee information</div>
+        <div className="pf-section">
+          <span className="pf-section-num">01</span>
+          Employee information
+        </div>
         <div className="pf-grid">
           <label className="pf-field full">
             Employee name <span className="pf-req">*</span>
@@ -265,7 +297,10 @@ export default function EmployeeOnboardPage() {
           </label>
         </div>
 
-        <div className="pf-section">Emergency contact</div>
+        <div className="pf-section">
+          <span className="pf-section-num">02</span>
+          Emergency contact
+        </div>
         <div className="pf-grid">
           <label className="pf-field full">
             Address
@@ -289,7 +324,10 @@ export default function EmployeeOnboardPage() {
           </label>
         </div>
 
-        <div className="pf-section">Attachments (PDF / image)</div>
+        <div className="pf-section">
+          <span className="pf-section-num">03</span>
+          Attachments (PDF / image)
+        </div>
         <div className="pf-grid">
           {[
             ['cv', 'Updated CV'],
@@ -299,7 +337,7 @@ export default function EmployeeOnboardPage() {
             ['bank_details', 'Bank details'],
             ['salary_slip', 'Salary slip'],
           ].map(([key, label]) => (
-            <label key={key} className="pf-field full">
+            <label key={key} className="pf-field pf-file full">
               {label}
               <input
                 type="file"
@@ -309,7 +347,7 @@ export default function EmployeeOnboardPage() {
               />
             </label>
           ))}
-          <label className="pf-field full">
+          <label className="pf-field pf-file full">
             Education / other certificates
             <input
               type="file"
@@ -324,6 +362,7 @@ export default function EmployeeOnboardPage() {
           <button type="submit" className="pf-btn" disabled={busy}>
             {busy ? 'Submitting…' : 'Submit to HR'}
           </button>
+          <p className="pf-foot-note">Confidential — for Dip Projects HR use only</p>
         </div>
       </form>
     </div>
