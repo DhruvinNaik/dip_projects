@@ -1247,32 +1247,21 @@ function RecruitmentView({ apiCandidates, onReload, busySet }) {
 
       {subTab === 'candidates' && (
         <>
-          <div
-            className="hr-apply-qr"
-            style={{
-              display: 'flex',
-              gap: 16,
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              marginBottom: 18,
-              padding: 14,
-              border: '1px solid var(--hr-line, #e2d5c6)',
-              borderRadius: 12,
-              background: '#fffaf5',
-            }}
-          >
-            {applyQr?.qr ? (
-              <img src={applyQr.qr} alt="Apply QR" width={140} height={140} />
-            ) : (
-              <div style={{ width: 140, height: 140, background: '#f5f0eb', borderRadius: 8 }} />
-            )}
-            <div style={{ flex: 1, minWidth: 200 }}>
-              <div style={{ fontWeight: 700, marginBottom: 6, fontSize: '1rem' }}>Candidate application QR / link</div>
+          <div className="hr-apply-qr">
+            <div className="hr-apply-qr-code">
+              {applyQr?.qr ? (
+                <img src={applyQr.qr} alt="Apply QR" width={140} height={140} />
+              ) : (
+                <div className="hr-apply-qr-placeholder" />
+              )}
+            </div>
+            <div className="hr-apply-qr-body">
+              <div className="hr-apply-qr-title">Candidate application QR / link</div>
               <p className="hr-sub" style={{ margin: '0 0 8px' }}>
                 Candidate form fill kare → CV / Aadhaar / PAN / Photo Documents me save ho jayenge.
               </p>
-              <div style={{ fontSize: '0.82rem', wordBreak: 'break-all', marginBottom: 8 }}>{applyUrl}</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div className="hr-apply-qr-url">{applyUrl}</div>
+              <div className="hr-apply-qr-actions">
                 <button
                   type="button"
                   className="hr-btn"
@@ -1283,7 +1272,7 @@ function RecruitmentView({ apiCandidates, onReload, busySet }) {
                 >
                   Copy link
                 </button>
-                <a className="hr-btn ghost" href={applyUrl} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                <a className="hr-btn ghost" href={applyUrl} target="_blank" rel="noreferrer">
                   Open form
                 </a>
               </div>
