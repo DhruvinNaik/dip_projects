@@ -1315,15 +1315,52 @@ function RecruitmentView({ apiCandidates, onReload, busySet }) {
                         <td>{[c.phone, c.email].filter(Boolean).join(' · ') || '—'}</td>
                         <td>{c.submitted_by_name || (c.source === 'public_qr' ? 'QR Apply' : '—')}</td>
                         <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {c.application ? (
-                              <button type="button" className="hr-btn ghost" onClick={() => setDetail(c)}>View form</button>
-                            ) : null}
-                            {docs.map((d) => (
-                              <a key={`${d.label}-${d.url}`} href={d.url} target="_blank" rel="noreferrer">{d.label}</a>
-                            ))}
-                            {!c.application && !docs.length ? '—' : null}
-                          </div>
+                          {(c.application || docs.length) ? (
+                            <div className="hr-cand-docs" role="group" aria-label="Form and documents">
+                              {c.application ? (
+                                <button
+                                  type="button"
+                                  className="hr-cand-doc hr-cand-doc--form"
+                                  onClick={() => setDetail(c)}
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="8" y1="13" x2="16" y2="13" />
+                                    <line x1="8" y1="17" x2="13" y2="17" />
+                                  </svg>
+                                  View form
+                                </button>
+                              ) : null}
+                              {docs.map((d) => (
+                                <a
+                                  key={`${d.label}-${d.url}`}
+                                  className={`hr-cand-doc${d.label === 'CV' ? ' hr-cand-doc--cv' : ''}`}
+                                  href={d.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title={`Open ${d.label}`}
+                                >
+                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                    {d.label === 'CV' ? (
+                                      <>
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                        <circle cx="12" cy="13" r="2" />
+                                        <path d="M8 18c0-1.5 1.8-2.5 4-2.5s4 1 4 2.5" />
+                                      </>
+                                    ) : (
+                                      <>
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                        <polyline points="14 2 14 8 20 8" />
+                                      </>
+                                    )}
+                                  </svg>
+                                  {d.label}
+                                </a>
+                              ))}
+                            </div>
+                          ) : '—'}
                         </td>
                         <td>
                           <input
@@ -1387,15 +1424,21 @@ function RecruitmentView({ apiCandidates, onReload, busySet }) {
           <div className="hr-modal" onClick={(e) => e.stopPropagation()} role="dialog" style={{ maxWidth: 560, maxHeight: '85vh', overflow: 'auto' }}>
             <h3 style={{ marginTop: 0 }}>{detail.candidate_name}</h3>
             {appDocs(detail).length ? (
-              <div style={{ marginBottom: 12 }}>
+              <div className="hr-cand-docs-modal" style={{ marginBottom: 12 }}>
                 <strong style={{ fontSize: '0.85rem' }}>Documents</strong>
-                <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                <div className="hr-cand-docs" style={{ marginTop: 8 }}>
                   {appDocs(detail).map((d) => (
-                    <li key={`${d.label}-${d.url}`}>
-                      <a href={d.url} target="_blank" rel="noreferrer">{d.label}</a>
-                    </li>
+                    <a
+                      key={`${d.label}-${d.url}`}
+                      className={`hr-cand-doc${d.label === 'CV' ? ' hr-cand-doc--cv' : ''}`}
+                      href={d.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {d.label}
+                    </a>
                   ))}
-                </ul>
+                </div>
               </div>
             ) : null}
             <pre style={{ whiteSpace: 'pre-wrap', fontSize: '0.78rem', background: '#f7f1ea', padding: 10, borderRadius: 8 }}>
