@@ -830,10 +830,108 @@ function DateTreeNodes({
   ));
 }
 
+const DEFAULT_LIBRARY_BRANCHES = [
+  { key: "dpr", label: "DPR", dates: [] },
+  { key: "wpr", label: "WPR", dates: [] },
+  { key: "mpr", label: "Monthly Report", dates: [] },
+  { key: "drawings", label: "Drawings", categories: [], dates: [] },
+  { key: "photo", label: "Site Photos", dates: [] },
+];
+
+function mergeLibraryBranches(apiBranches) {
+  const byKey = Object.fromEntries(
+    (apiBranches || []).map((b) => [b.key, b]),
+  );
+  const merged = DEFAULT_LIBRARY_BRANCHES.map((def) => {
+    const hit = byKey[def.key];
+    if (!hit) return { ...def };
+    if (def.key === "drawings") {
+      return {
+        ...def,
+        ...hit,
+        categories: hit.categories?.length ? hit.categories : [],
+        dates: hit.dates || [],
+      };
+    }
+    return { ...def, ...hit, dates: hit.dates || [] };
+  });
+  // Any extra custom branches from API
+  (apiBranches || []).forEach((b) => {
+    if (!DEFAULT_LIBRARY_BRANCHES.some((d) => d.key === b.key)) {
+      merged.push(b);
+    }
+  });
+  return merged;
+}
+
+function buildLibraryBranchesFromPayload({ dprs = [], wprs = [], photos = [], monthlies = [], drawings = [] }) {
+  const branches = [];
+  const dprDates = (dprs || []).map((r) => r.date || r.created_at).filter(Boolean);
+  if (dprDates.length) branches.push({ key: "dpr", label: "DPR", dates: dprDates });
+
+  const wprDates = (wprs || [])
+    .map((r) => r.created_at || r.report_date)
+    .filter(Boolean);
+  if (wprDates.length) branches.push({ key: "wpr", label: "WPR", dates: wprDates });
+
+  const mprDates = (monthlies || []).map((r) => r.created_at).filter(Boolean);
+  if (mprDates.length) {
+    branches.push({ key: "mpr", label: "Monthly Report", dates: mprDates });
+  }
+
+  const drawingCats = new Map();
+  (drawings || []).forEach((d) => {
+    const cat = String(d.category || "Uncategorised").trim() || "Uncategorised";
+    if (!drawingCats.has(cat)) drawingCats.set(cat, []);
+    const date = d.drawing_date || d.created_at;
+    if (date) drawingCats.get(cat).push(date);
+    else drawingCats.get(cat).push(new Date().toISOString());
+  });
+  if (drawingCats.size) {
+    const preferred = ["Architectural", "Structural", "MEP"];
+    const categories = [...drawingCats.entries()]
+      .map(([name, dates]) => ({
+        key: name,
+        label: name,
+        dates,
+        count: dates.length,
+      }))
+      .sort((a, b) => {
+        const ai = preferred.findIndex(
+          (p) => p.toLowerCase() === a.label.toLowerCase(),
+        );
+        const bi = preferred.findIndex(
+          (p) => p.toLowerCase() === b.label.toLowerCase(),
+        );
+        if (ai !== -1 || bi !== -1) {
+          if (ai === -1) return 1;
+          if (bi === -1) return -1;
+          return ai - bi;
+        }
+        return a.label.localeCompare(b.label, undefined, { sensitivity: "base" });
+      });
+    branches.push({
+      key: "drawings",
+      label: "Drawings",
+      categories,
+      dates: categories.flatMap((c) => c.dates),
+    });
+  }
+
+  const photoDates = (photos || [])
+    .filter((p) => String(p.source || "") !== "drawing")
+    .map((p) => p.actual_created_at || p.created_at)
+    .filter(Boolean);
+  if (photoDates.length) {
+    branches.push({ key: "photo", label: "Site Photos", dates: photoDates });
+  }
+
+  return branches;
+}
+
 /**
  * Sidebar library: DPR / WPR / Monthly / Drawings(categories) / Site Photos
- * Reports & photos → year → month → day
- * Drawings → category only (date filter lives in the drawings toolbar)
+ * Always shows the core branches so panels open even if counts are still loading.
  */
 function ClientLibraryTree({
   siteName,
@@ -842,51 +940,104 @@ function ClientLibraryTree({
   activeDate,
   onSelect,
 }) {
-  const [branches, setBranches] = useState(null);
-  const [openBranches, setOpenBranches] = useState({});
+  const [branches, setBranches] = useState(() =>
+    mergeLibraryBranches([]),
+  );
+  const [treeError, setTreeError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [openBranches, setOpenBranches] = useState({ dpr: true });
   const [openYears, setOpenYears] = useState({});
   const [openMonths, setOpenMonths] = useState({});
 
-  useEffect(() => {
+  const loadTree = useCallback(async () => {
     if (!siteName) return;
-    setBranches(null);
-    (async () => {
+    setLoading(true);
+    setTreeError("");
+    // Keep defaults visible while loading
+    setBranches(mergeLibraryBranches([]));
+    const siteQ = encodeURIComponent(siteName);
+    try {
+      let list = [];
+      // Prefer /media + /drawings (stable) — media-tree is optional enrichment
       try {
-        const data = await api(
-          `/client/media-tree?site=${encodeURIComponent(siteName)}`,
-        );
-        const list = data.branches || [];
-        setBranches(list);
-        if (!list[0]) return;
-        setOpenBranches({ [list[0].key]: true });
-        if (list[0].key === "drawings") return;
-        const years = buildDateTree(list[0].dates || []);
-        if (years[0]) {
-          setOpenYears({ [`${list[0].key}:${years[0].key}`]: true });
-          if (years[0].months[0]) {
-            setOpenMonths({
-              [`${list[0].key}:${years[0].months[0].key}`]: true,
-            });
-          }
-        }
-      } catch (_) {
-        setBranches([]);
+        const [media, drawingsPayload] = await Promise.all([
+          api(`/client/media?site=${siteQ}`),
+          api(`/client/drawings?site=${siteQ}`).catch(() => ({ drawings: [] })),
+        ]);
+        list = buildLibraryBranchesFromPayload({
+          dprs: media.dprs,
+          wprs: media.wprs,
+          photos: media.photos,
+          monthlies: media.monthlies,
+          drawings: drawingsPayload.drawings?.length
+            ? drawingsPayload.drawings
+            : media.drawings,
+        });
+      } catch (mediaErr) {
+        console.warn("client media fallback:", mediaErr);
       }
-    })();
+
+      try {
+        const data = await api(`/client/media-tree?site=${siteQ}`);
+        if (data.branches?.length) {
+          // Prefer tree when it has data; merge so defaults never disappear
+          list = data.branches;
+        }
+      } catch (treeErr) {
+        // Ignore — media path above is enough
+        if (!list.length) {
+          setTreeError(treeErr?.message || "");
+        }
+      }
+
+      const merged = mergeLibraryBranches(list);
+      setBranches(merged);
+      const firstWithData =
+        merged.find(
+          (b) =>
+            (b.key === "drawings"
+              ? (b.categories || []).length || (b.dates || []).length
+              : (b.dates || []).length) > 0,
+        ) || merged[0];
+      if (firstWithData) {
+        setOpenBranches((s) => ({ ...s, [firstWithData.key]: true }));
+      }
+    } catch (err) {
+      console.error("client library tree:", err);
+      setTreeError(err?.message || "Could not load files");
+      setBranches(mergeLibraryBranches([]));
+    }
+    setLoading(false);
   }, [siteName]);
 
-  if (!branches) return <div className="cp-tree-empty">Loading…</div>;
-  if (!branches.length)
-    return <div className="cp-tree-empty">No files for this site yet</div>;
+  useEffect(() => {
+    loadTree();
+  }, [loadTree]);
 
   return (
     <div className="cp-tree cp-library-tree">
+      {loading && <div className="cp-tree-empty">Updating…</div>}
+      {treeError && !loading && (
+        <div className="cp-tree-empty" style={{ marginBottom: 6 }}>
+          {treeError}{" "}
+          <button type="button" className="cp-refresh-btn" onClick={loadTree}>
+            Retry
+          </button>
+        </div>
+      )}
       {branches.map((branch) => {
         const branchOpen = !!openBranches[branch.key];
         const branchAct =
           activeBranch === branch.key &&
           !activeDate &&
           (branch.key !== "drawings" || !activeCategory);
+        const count =
+          branch.key === "drawings"
+            ? (branch.categories || []).reduce(
+                (n, c) => n + (c.count || 0),
+                0,
+              ) || (branch.dates || []).length
+            : (branch.dates || []).length;
 
         return (
           <div key={branch.key} className="cp-lib-branch">
@@ -906,61 +1057,64 @@ function ClientLibraryTree({
             >
               <IcoChevron open={branchOpen} />
               <span className="cp-tree-label">{branch.label}</span>
-              <span className="cp-tree-count">
-                {branch.key === "drawings"
-                  ? (branch.categories || []).reduce(
-                      (n, c) => n + (c.count || 0),
-                      0,
-                    )
-                  : (branch.dates || []).length}
-              </span>
+              <span className="cp-tree-count">{count}</span>
             </div>
 
             {branchOpen && branch.key === "drawings" && (
               <div className="cp-tree-children">
-                {(branch.categories || []).map((cat) => {
-                  const catAct =
-                    activeBranch === "drawings" &&
-                    activeCategory === cat.key;
-                  return (
-                    <div
-                      key={cat.key}
-                      className={`cp-tree-row cp-lib-cat-row${catAct ? " act" : ""}`}
-                      onClick={() =>
-                        onSelect?.({
-                          branch: "drawings",
-                          category: cat.key,
-                          date: null,
-                        })
-                      }
-                    >
-                      <span className="cp-tree-leaf-dot" />
-                      <span className="cp-tree-label">{cat.label}</span>
-                      <span className="cp-tree-count">{cat.count || 0}</span>
-                    </div>
-                  );
-                })}
+                {(branch.categories || []).length ? (
+                  (branch.categories || []).map((cat) => {
+                    const catAct =
+                      activeBranch === "drawings" &&
+                      activeCategory === cat.key;
+                    return (
+                      <div
+                        key={cat.key}
+                        className={`cp-tree-row cp-lib-cat-row${catAct ? " act" : ""}`}
+                        onClick={() =>
+                          onSelect?.({
+                            branch: "drawings",
+                            category: cat.key,
+                            date: null,
+                          })
+                        }
+                      >
+                        <span className="cp-tree-leaf-dot" />
+                        <span className="cp-tree-label">{cat.label}</span>
+                        <span className="cp-tree-count">{cat.count || 0}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="cp-tree-empty">All drawings</div>
+                )}
               </div>
             )}
 
             {branchOpen && branch.key !== "drawings" && (
               <div className="cp-tree-children">
-                <DateTreeNodes
-                  years={buildDateTree(branch.dates || [])}
-                  keyPrefix={branch.key}
-                  openYears={openYears}
-                  setOpenYears={setOpenYears}
-                  openMonths={openMonths}
-                  setOpenMonths={setOpenMonths}
-                  activeDate={activeBranch === branch.key ? activeDate : null}
-                  onSelectDate={(dayKey) =>
-                    onSelect?.({
-                      branch: branch.key,
-                      category: null,
-                      date: dayKey,
-                    })
-                  }
-                />
+                {(branch.dates || []).length ? (
+                  <DateTreeNodes
+                    years={buildDateTree(branch.dates || [])}
+                    keyPrefix={branch.key}
+                    openYears={openYears}
+                    setOpenYears={setOpenYears}
+                    openMonths={openMonths}
+                    setOpenMonths={setOpenMonths}
+                    activeDate={
+                      activeBranch === branch.key ? activeDate : null
+                    }
+                    onSelectDate={(dayKey) =>
+                      onSelect?.({
+                        branch: branch.key,
+                        category: null,
+                        date: dayKey,
+                      })
+                    }
+                  />
+                ) : (
+                  <div className="cp-tree-empty">No dates yet</div>
+                )}
               </div>
             )}
           </div>
@@ -2973,13 +3127,18 @@ export default function ClientPortal() {
         setMediaBranch("drawings");
       } else if (key === "media") {
         setMediaBranch("dpr");
+      } else if (key === "files") {
+        // Always open a panel immediately (same as old Reports & Photos)
+        setMediaBranch((prev) => prev || "dpr");
       }
       if (opts.category !== undefined) {
         setDrawingCategory(opts.category);
       } else if (opts.branch === "drawings" || key === "drawings") {
         setDrawingCategory(null);
-      } else if (opts.branch || key === "media") {
-        setDrawingCategory(null);
+      } else if (opts.branch || key === "media" || key === "files") {
+        if (opts.branch !== "drawings" && key !== "drawings") {
+          setDrawingCategory(null);
+        }
       }
     } else {
       setMediaBranch(null);
@@ -2989,7 +3148,7 @@ export default function ClientPortal() {
   };
 
   const handleLibrarySelect = ({ branch, category, date }) => {
-    setMediaBranch(branch || null);
+    setMediaBranch(branch || "dpr");
     setDrawingCategory(branch === "drawings" ? category || null : null);
     setJumpDate(date || null);
     setSection("files");
@@ -3001,6 +3160,13 @@ export default function ClientPortal() {
     setMediaBranch(null);
     setDrawingCategory(null);
   }, [activeSite]);
+
+  // Opening Files with no selection → show DPR panel right away
+  useEffect(() => {
+    if (section === "files" && !mediaBranch) {
+      setMediaBranch("dpr");
+    }
+  }, [section, mediaBranch]);
 
   const filesPageTitle = (() => {
     if (mediaBranch === "drawings") {
@@ -3015,8 +3181,6 @@ export default function ClientPortal() {
   const showDrawingsPanel = section === "files" && mediaBranch === "drawings";
   const showMediaPanel =
     section === "files" && mediaBranch && mediaBranch !== "drawings";
-  const showFilesPlaceholder =
-    section === "files" && !mediaBranch;
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -3289,16 +3453,6 @@ export default function ClientPortal() {
                       lockedType={mediaBranch}
                       onClearJump={() => setJumpDate(null)}
                     />
-                  )}
-                  {showFilesPlaceholder && (
-                    <div className="cp-empty">
-                      <IcoFolder />
-                      <div className="cp-empty-title">Browse the library</div>
-                      <div className="cp-empty-sub">
-                        Open DPR, WPR, Monthly Report, Drawings, or Site Photos
-                        in the sidebar, then pick a date.
-                      </div>
-                    </div>
                   )}
                   {section === "profile" && (
                     <ProfilePage
